@@ -74,7 +74,7 @@ export function Sidebar() {
               </div>
               <div className="flex-1 overflow-hidden">
                 <p className="truncate text-sm font-medium text-sidebar-foreground">
-                  Acme Corporation
+                  VeriShip Inc.
                 </p>
                 <p className="truncate text-xs text-sidebar-muted">
                   Enterprise Plan

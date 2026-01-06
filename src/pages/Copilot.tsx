@@ -19,7 +19,7 @@ export default function Copilot() {
         {
             id: "1",
             role: "assistant",
-            content: "👋 Hello! I'm your Quality Copilot. I can help you with:\n• Analyzing requirement clarity and testability\n• Generating comprehensive test cases\n• Assessing release readiness\n• Providing QA insights and recommendations\n\nWhat would you like help with today?",
+            content: "👋 Hello! I'm Maria, your Quality Copilot. I can help you with:\n• Analyzing requirement clarity and testability\n• Generating comprehensive test cases\n• Assessing release readiness\n• Providing QA insights and recommendations\n\nWhat would you like help with today?",
             timestamp: new Date(),
         },
     ]);
@@ -167,15 +167,15 @@ export default function Copilot() {
                                     >
                                         <div
                                             className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.role === "user"
-                                                    ? "bg-accent text-accent-foreground"
-                                                    : "bg-muted text-muted-foreground"
+                                                ? "bg-accent text-accent-foreground"
+                                                : "bg-muted text-muted-foreground"
                                                 }`}
                                         >
                                             <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                                             <p
                                                 className={`text-xs mt-1 ${message.role === "user"
-                                                        ? "text-accent-foreground/70"
-                                                        : "text-muted-foreground/70"
+                                                    ? "text-accent-foreground/70"
+                                                    : "text-muted-foreground/70"
                                                     }`}
                                             >
                                                 {message.timestamp.toLocaleTimeString([], {
