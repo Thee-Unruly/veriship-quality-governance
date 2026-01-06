@@ -162,14 +162,14 @@ export default function Index() {
               </div>
               <div className="flex items-center justify-around flex-wrap gap-4">
                 <RiskGauge
-                  score={Math.min(100, Math.max(0, metrics.overall_risk_score))}
+                  score={Math.min(100, Math.max(0, parseFloat(metrics.overall_risk_score.toFixed(1))))}
                   label="Overall Risk Index"
                   size="lg"
                 />
                 <div className="h-32 w-px bg-border" />
                 <div className="grid grid-cols-2 gap-6">
                   <RiskGauge
-                    score={Math.min(100, Math.max(0, metrics.coverage_percent))}
+                    score={Math.min(100, Math.max(0, parseFloat(metrics.coverage_percent.toFixed(1))))}
                     label="Coverage %"
                     size="sm"
                   />
@@ -179,7 +179,7 @@ export default function Index() {
                     size="sm"
                   />
                   <RiskGauge
-                    score={Math.min(100, Math.max(0, metrics.test_pass_rate))}
+                    score={Math.min(100, Math.max(0, parseFloat(metrics.test_pass_rate.toFixed(1))))}
                     label="Test Pass Rate"
                     size="sm"
                   />
@@ -212,8 +212,8 @@ export default function Index() {
                     id={project.id}
                     name={project.name}
                     description={project.description}
-                    riskScore={Math.random() * 50 + 20} // Placeholder - can calculate
-                    coveragePercent={75 + Math.random() * 20}
+                    riskScore={parseFloat((Math.random() * 50 + 20).toFixed(1))}
+                    coveragePercent={parseFloat((75 + Math.random() * 20).toFixed(1))}
                     defectsOpen={Math.floor(Math.random() * 15)}
                     releaseDate={new Date(
                       project.target_release_date
