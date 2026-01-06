@@ -80,21 +80,21 @@ export default function Index() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <MetricCard
             title="Total Requirements"
-            value={342}
-            subtitle="across 3 projects"
+            value={projects.length * 5} // 5 requirements per project
+            subtitle={`across ${projects.length} projects`}
             trend={{ value: 12, label: "this month" }}
             icon={<FileText className="h-5 w-5 text-muted-foreground" />}
           />
           <MetricCard
             title="Test Cases"
-            value={1247}
+            value={projects.length * 15} // 15 test cases per project
             subtitle="85% automated"
             trend={{ value: 8, label: "this month" }}
             icon={<CheckSquare className="h-5 w-5 text-muted-foreground" />}
           />
           <MetricCard
             title="Open Defects"
-            value={39}
+            value={projects.length * 10} // 10 defects per project
             subtitle="7 critical"
             trend={{ value: -15, label: "vs last week" }}
             icon={<Bug className="h-5 w-5 text-muted-foreground" />}
@@ -102,7 +102,7 @@ export default function Index() {
           />
           <MetricCard
             title="Pending Releases"
-            value={4}
+            value={projects.length}
             subtitle="2 ready for approval"
             icon={<Rocket className="h-5 w-5 text-muted-foreground" />}
           />
