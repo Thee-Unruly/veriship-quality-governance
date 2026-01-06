@@ -1,53 +1,58 @@
-# Welcome to your Lovable project
+# VeriShip - Enterprise QA Intelligence & Release Governance
 
-## Project info
+An intelligent quality assurance platform for enterprise software teams. VeriShip provides real-time visibility into requirements QA, test design & execution, defect intelligence, and release readiness across all projects.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Key Features
 
-## How can I edit this code?
+- **Requirements QA** - AI-powered analysis of requirement clarity, traceability, and testability
+- **Test Design & Execution** - Test case management with automation tracking and execution metrics
+- **Defect Intelligence** - Smart defect tracking with risk scoring and recurrence prediction
+- **Release Governance** - Automated release readiness assessment and approval workflows
+- **Real-time Dashboard** - Live metrics on quality coverage, risk scores, and team activity
+- **AI Insights** - Machine learning-powered recommendations for quality improvements
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+**Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui  
+**Backend**: FastAPI + SQLAlchemy + PostgreSQL + Redis  
+**Infrastructure**: Docker + Docker Compose
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Quick Start
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
+- Node.js & npm
+- Python 3.10+
+- Docker & Docker Compose
 
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+### Development
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Install frontend dependencies
+npm install
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start frontend (port 8080)
 npm run dev
+
+# Start backend (in another terminal)
+cd backend
+python run.py
+
+# Start Docker services (PostgreSQL, Redis)
+docker-compose up -d
 ```
 
-**Edit a file directly in GitHub**
+Visit `http://localhost:8080` to access the dashboard.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Project Structure
 
-**Use GitHub Codespaces**
+- `src/` - React frontend components and pages
+- `backend/` - FastAPI application, models, and routes
+- `public/` - Static assets
+- `docker-compose.yml` - Docker services configuration
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
+## Architecture
+
+The platform follows a modular design with 6 core QA modules, each with dedicated database schemas, API endpoints, and UI components for specialized quality governance workflows.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
 ## What technologies are used for this project?
