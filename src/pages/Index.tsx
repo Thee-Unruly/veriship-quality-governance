@@ -17,20 +17,20 @@ import {
 const mockApprovers = [
   {
     id: "1",
-    name: "Sarah Chen",
+    name: "Ruthu Jemutai",
     role: "QA Lead",
     status: "approved" as const,
     timestamp: "Jan 5, 10:23 AM",
   },
   {
     id: "2",
-    name: "Michael Torres",
+    name: "Barry Alfredo",
     role: "Product Manager",
     status: "pending" as const,
   },
   {
     id: "3",
-    name: "Jennifer Liu",
+    name: "Sydney Chirichiri",
     role: "Engineering Lead",
     status: "pending" as const,
   },
