@@ -14,6 +14,7 @@ import Analytics from "./pages/Analytics";
 import Compliance from "./pages/Compliance";
 import Team from "./pages/Team";
 import Settings from "./pages/Settings";
+import Copilot from "./pages/Copilot";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -61,6 +62,7 @@ const App = () => {
             <Route path="/compliance" element={<ProtectedRoute element={<Compliance />} />} />
             <Route path="/team" element={<ProtectedRoute element={<Team />} />} />
             <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
+            <Route path="/copilot" element={<ProtectedRoute element={<Copilot />} />} />
             <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

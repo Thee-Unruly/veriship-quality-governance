@@ -111,7 +111,13 @@ export function Sidebar() {
               <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-muted">
                 AI Assistant
               </div>
-              <button className="nav-item w-full group">
+              <Link
+                to="/copilot"
+                className={cn(
+                  "nav-item w-full group",
+                  location.pathname === "/copilot" && "nav-item-active"
+                )}
+              >
                 <div className="relative">
                   <Sparkles className="h-5 w-5 text-sidebar-primary" />
                   <span className="absolute -right-1 -top-1 flex h-2 w-2">
@@ -120,7 +126,7 @@ export function Sidebar() {
                   </span>
                 </div>
                 <span className="text-sidebar-foreground">Quality Copilot</span>
-              </button>
+              </Link>
             </div>
           )}
 
