@@ -23,3 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 C:\Users\ibrahim.fadhili\Videos\VeriShip\veriship-quality-governance\backend\venv
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env

@@ -1,9 +1,21 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle, CheckCircle2, AlertTriangle, Sparkles, Loader } from "lucide-react";
+import {
+    AlertCircle,
+    CheckCircle2,
+    AlertTriangle,
+    Sparkles,
+    Loader,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface AnalyzeRequirementModalProps {
@@ -34,25 +46,34 @@ export function AnalyzeRequirementModal({
     const handleAnalyze = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:8000/api/copilot/analyze-requirement-clarity/${requirementId}`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-            });
+            const response = await fetch(
+                `http://localhost:8000/api/copilot/analyze-requirement-clarity/${requirementId}`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
 
             if (!response.ok) {
                 throw new Error("Failed to analyze requirement");
             }
 
-            const data = await response.json();
+            const data: AnalysisResult = await response.json();
             setAnalysis(data);
-            toast({ title: "Analysis Complete", description: "Requirement analysis has been completed." });
+
+            toast({
+                title: "Analysis Complete",
+                description: "Requirement analysis has been completed.",
+            });
         } catch (error) {
             toast({
                 title: "Error",
-                description: error instanceof Error ? error.message : "Failed to analyze requirement",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to analyze requirement",
                 variant: "destructive",
             });
         } finally {
@@ -79,9 +100,14 @@ export function AnalyzeRequirementModal({
                 {!analysis ? (
                     <div className="space-y-4 py-4">
                         <p className="text-sm text-muted-foreground">
-                            The AI will analyze this requirement for clarity, testability, ambiguous terms, and completeness.
+                            The AI will analyze this requirement for clarity, testability,
+                            ambiguous terms, and completeness.
                         </p>
-                        <Button onClick={handleAnalyze} disabled={loading} className="w-full">
+                        <Button
+                            onClick={handleAnalyze}
+                            disabled={loading}
+                            className="w-full"
+                        >
                             {loading ? (
                                 <>
                                     <Loader className="mr-2 h-4 w-4 animate-spin" />
@@ -98,18 +124,13 @@ export function AnalyzeRequirementModal({
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label className="text-sm font-semibold">Clarity Score</label>
-                                <Badge variant={analysis.clarity_score >= 70 ? "default" : "secondary"}>
+                                <Badge
+                                    variant={analysis.clarity_score >= 70 ? "default" : "secondary"}
+                                >
                                     {analysis.clarity_score.toFixed(1)}%
                                 </Badge>
                             </div>
                             <Progress value={analysis.clarity_score} className="h-2" />
-                            <p className="text-xs text-muted-foreground">
-                                {analysis.clarity_score >= 80
-                                    ? "Excellent clarity - requirement is well-defined"
-                                    : analysis.clarity_score >= 60
-                                        ? "Good clarity - minor improvements recommended"
-                                        : "Low clarity - significant improvements needed"}
-                            </p>
                         </div>
 
                         {/* Testability */}
@@ -117,12 +138,16 @@ export function AnalyzeRequirementModal({
                             {analysis.is_testable ? (
                                 <>
                                     <CheckCircle2 className="h-5 w-5 text-green-600" />
-                                    <span className="text-sm font-medium">Requirement is testable</span>
+                                    <span className="text-sm font-medium">
+                                        Requirement is testable
+                                    </span>
                                 </>
                             ) : (
                                 <>
                                     <AlertCircle className="h-5 w-5 text-orange-600" />
-                                    <span className="text-sm font-medium">Requirement may be difficult to test</span>
+                                    <span className="text-sm font-medium">
+                                        Requirement may be difficult to test
+                                    </span>
                                 </>
                             )}
                         </div>
@@ -136,7 +161,7 @@ export function AnalyzeRequirementModal({
                                 </label>
                                 <div className="flex flex-wrap gap-2">
                                     {analysis.ambiguous_terms.map((term, idx) => (
-                                        <Badge key={idx} variant="outline" className="bg-warning/10">
+                                        <Badge key={idx} variant="outline">
                                             "{term}"
                                         </Badge>
                                     ))}
@@ -144,30 +169,16 @@ export function AnalyzeRequirementModal({
                             </div>
                         )}
 
-                        {/* Missing Criteria */}
-                        {analysis.missing_criteria.length > 0 && (
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold">Missing Criteria</label>
-                                <ul className="space-y-1">
-                                    {analysis.missing_criteria.map((criterion, idx) => (
-                                        <li key={idx} className="text-sm text-muted-foreground flex gap-2">
-                                            <span className="text-primary">•</span>
-                                            {criterion}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-
                         {/* Suggestions */}
                         {analysis.suggestions.length > 0 && (
                             <div className="space-y-2">
-                                <label className="text-sm font-semibold">Improvement Suggestions</label>
+                                <label className="text-sm font-semibold">
+                                    Improvement Suggestions
+                                </label>
                                 <ul className="space-y-1">
-                                    {analysis.suggestions.map((suggestion, idx) => (
-                                        <li key={idx} className="text-sm text-muted-foreground flex gap-2">
-                                            <span className="text-accent">→</span>
-                                            {suggestion}
+                                    {analysis.suggestions.map((s, idx) => (
+                                        <li key={idx} className="text-sm text-muted-foreground">
+                                            → {s}
                                         </li>
                                     ))}
                                 </ul>

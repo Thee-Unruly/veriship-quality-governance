@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     claude_api_key: str = ""
     
+    # OpenRouter API Configuration
+    openrouter_clarity_api_key: str = ""
+    openrouter_testcase_api_key: str = ""
+    openrouter_api_url: str = "https://openrouter.ai/api/v1/chat/completions"
+    openrouter_model: str = "google/gemma-3-27b-it:free"
+    openrouter_site_url: str = "http://localhost:8080"
+    openrouter_site_name: str = "VeriShip QA Platform"
+    
     # JWT
     secret_key: str = "dev-secret-key-change-in-production"
     algorithm: str = "HS256"

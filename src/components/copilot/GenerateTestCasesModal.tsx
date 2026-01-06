@@ -60,17 +60,11 @@ export function GenerateTestCasesModal({
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
-                },
-            });
 
-            if (!response.ok) {
-                throw new Error("Failed to generate test cases");
-            }
-
-            const data = await response.json();
-            setResult(data);
-            toast({ title: "Generation Complete", description: `${data.generated_test_cases.length} test cases generated.` });
+                    const data = await response.json();
+                    setResult(data);
+            toast({ title: "Generation Complete", description: `${data.generated_test_cases.length
+                } test cases generated.` });
         } catch (error) {
             toast({
                 title: "Error",
@@ -84,17 +78,17 @@ export function GenerateTestCasesModal({
 
     const handleCopy = (idx: number, testCase: GeneratedTestCase) => {
         const text = `
-Title: ${testCase.title}
-Description: ${testCase.description || "N/A"}
-Type: ${testCase.test_type}
-Priority: ${priorityLabels[testCase.priority]}
+Title: ${ testCase.title }
+Description: ${ testCase.description || "N/A" }
+Type: ${ testCase.test_type }
+Priority: ${ priorityLabels[testCase.priority]}
 
 Test Steps:
-${testCase.test_steps.map((step, i) => `${i + 1}. ${step}`).join("\n")}
+                ${ testCase.test_steps.map((step, i) => `${i + 1}. ${step}`).join("\n") }
 
 Expected Result:
-${testCase.expected_result}
-    `.trim();
+                ${ testCase.expected_result }
+                `.trim();
 
         navigator.clipboard.writeText(text);
         setCopied(idx);
