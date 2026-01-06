@@ -28,7 +28,16 @@ export default function Requirements() {
   const { toast } = useToast();
 
   const fetchRequirements = async () => {
-    //... (fetch logic remains the same)
+    try {
+      const response = await fetch(`http://localhost:8000/api/requirements/${selectedProject}`);
+      const data = await response.json();
+      setRequirements(data);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching requirements:", error);
+      toast({ title: "Error", description: "Failed to fetch requirements", variant: "destructive" });
+      setLoading(false);
+    }
   };
 
   const { delete: deleteRequirement } = useCrud({
@@ -120,7 +129,20 @@ export default function Requirements() {
                 </div>
               </CardHeader>
               <CardContent>
-                {/* content remains the same */}
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Priority</p>
+                    <p className="font-semibold">{req.priority}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Clarity Score</p>
+                    <p className="font-semibold">{req.clarity_score?.toFixed(1) || "N/A"}%</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Testable</p>
+                    <p className="font-semibold">{req.is_testable ? "Yes" : "No"}</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
