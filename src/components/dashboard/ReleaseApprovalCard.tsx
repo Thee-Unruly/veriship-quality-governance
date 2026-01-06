@@ -9,6 +9,8 @@ import {
   AlertTriangle,
   ChevronRight,
 } from "lucide-react";
+import { useState } from "react";
+import { EditReleaseModal } from "@/components/modals/EditReleaseModal";
 
 interface Approver {
   id: string;
@@ -26,6 +28,9 @@ interface ReleaseApprovalCardProps {
   riskScore: number;
   status: "go" | "conditional" | "no-go" | "pending";
   approvers: Approver[];
+  releaseId?: number;
+  onDetailsClick?: () => void;
+  onApproveClick?: () => void;
 }
 
 export function ReleaseApprovalCard({
@@ -35,7 +40,12 @@ export function ReleaseApprovalCard({
   riskScore,
   status,
   approvers,
+  releaseId,
+  onDetailsClick,
+  onApproveClick,
 }: ReleaseApprovalCardProps) {
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedRelease, setSelectedRelease] = useState<any>(null);
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "go":
@@ -111,8 +121,8 @@ export function ReleaseApprovalCard({
               riskScore <= 30
                 ? "text-success"
                 : riskScore <= 60
-                ? "text-warning"
-                : "text-destructive"
+                  ? "text-warning"
+                  : "text-destructive"
             )}
           >
             {riskScore}
@@ -125,8 +135,8 @@ export function ReleaseApprovalCard({
               riskScore <= 30
                 ? "bg-success"
                 : riskScore <= 60
-                ? "bg-warning"
-                : "bg-destructive"
+                  ? "bg-warning"
+                  : "bg-destructive"
             )}
             style={{ width: `${riskScore}%` }}
           />
@@ -176,16 +186,42 @@ export function ReleaseApprovalCard({
 
       {/* Actions */}
       <div className="mt-4 flex gap-2">
-        <Button className="flex-1" variant="outline">
+        <Button
+          className="flex-1"
+          variant="outline"
+          onClick={() => {
+            setSelectedRelease({ id: releaseId, version, project, status });
+            setIsEditModalOpen(true);
+            onDetailsClick?.();
+          }}
+        >
           View Details
           <ChevronRight className="ml-1 h-4 w-4" />
         </Button>
         {status === "pending" && (
-          <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90">
+          <Button
+            className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+            onClick={() => {
+              setSelectedRelease({ id: releaseId, version, project, status });
+              setIsEditModalOpen(true);
+              onApproveClick?.();
+            }}
+          >
             Review & Approve
           </Button>
         )}
       </div>
+
+      {releaseId && selectedRelease && (
+        <EditReleaseModal
+          isOpen={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          release={selectedRelease}
+          onSuccess={() => {
+            setIsEditModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -53,9 +53,9 @@ export function EditRequirementModal({
         await update(requirement.id, {
             title,
             description,
-            status: status as any,
+            status,
             priority: parseInt(priority),
-        });
+        } as any);
     };
 
     return (

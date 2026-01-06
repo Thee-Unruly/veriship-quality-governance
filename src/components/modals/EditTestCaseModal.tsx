@@ -58,7 +58,7 @@ export function EditTestCaseModal({
             test_type: testType,
             priority: parseInt(priority),
             is_automated: isAutomated,
-        });
+        } as any);
     };
 
     return (

@@ -51,7 +51,7 @@ export function EditReleaseModal({
 
         const data: any = {
             version,
-            status: status as any,
+            status,
         };
 
         if (releaseDate) {

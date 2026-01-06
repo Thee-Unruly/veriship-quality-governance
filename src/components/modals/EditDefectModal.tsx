@@ -55,10 +55,10 @@ export function EditDefectModal({
         await update(defect.id, {
             title,
             description,
-            severity: severity as any,
-            status: status as any,
+            severity,
+            status,
             found_by: foundBy || undefined,
-        });
+        } as any);
     };
 
     return (

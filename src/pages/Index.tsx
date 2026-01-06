@@ -14,28 +14,6 @@ import {
   Rocket,
 } from "lucide-react";
 
-const mockApprovers = [
-  {
-    id: "1",
-    name: "Ruthu Jemutai",
-    role: "QA Lead",
-    status: "approved" as const,
-    timestamp: "Jan 5, 10:23 AM",
-  },
-  {
-    id: "2",
-    name: "Barry Alfredo",
-    role: "Product Manager",
-    status: "pending" as const,
-  },
-  {
-    id: "3",
-    name: "Sydney Chirichiri",
-    role: "Engineering Lead",
-    status: "pending" as const,
-  },
-];
-
 interface Metrics {
   total_requirements: number;
   total_test_cases: number;
@@ -59,9 +37,53 @@ interface ProjectData {
   defects_open?: number;
 }
 
+interface Activity {
+  id: string | number;
+  type: string;
+  user: { name: string };
+  action: string;
+  target: string;
+  project: string;
+  timestamp: string | Date;
+}
+
+interface ReleaseData {
+  id: number;
+  version: string;
+  project_id: number;
+  status: string;
+  planned_release_date: string;
+  go_no_go_decision?: string;
+  risk_score?: number;
+}
+
+const mockApprovers = [
+  {
+    id: "1",
+    name: "Ruthu Jemutai",
+    role: "QA Lead",
+    status: "approved" as const,
+    timestamp: "Jan 5, 10:23 AM",
+  },
+  {
+    id: "2",
+    name: "Barry Alfredo",
+    role: "Product Manager",
+    status: "pending" as const,
+  },
+  {
+    id: "3",
+    name: "Sydney Chirichiri",
+    role: "Engineering Lead",
+    status: "pending" as const,
+  },
+];
+
 export default function Index() {
   const [projects, setProjects] = useState<ProjectData[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [releases, setReleases] = useState<ReleaseData[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
@@ -76,6 +98,34 @@ export default function Index() {
       const metricsRes = await fetch("http://localhost:8000/api/metrics/dashboard");
       const metricsData = await metricsRes.json();
       setMetrics(metricsData);
+
+      // Fetch activity
+      try {
+        const activityRes = await fetch("http://localhost:8000/api/metrics/activity");
+        const activityData = await activityRes.json();
+        // Transform backend activity format to frontend format
+        const transformedActivities = activityData.map((act: any) => ({
+          id: act.id,
+          type: act.activity_type as any,
+          user: { name: "System" },
+          action: act.description.split(":")[0].toLowerCase(),
+          target: act.description.split(":")[1]?.trim() || "",
+          project: act.project_name,
+          timestamp: new Date(act.timestamp),
+        })) as Activity[];
+        setActivities(transformedActivities.slice(0, 5));
+      } catch (err) {
+        console.error("Error fetching activity:", err);
+      }
+
+      // Fetch releases
+      try {
+        const releasesRes = await fetch("http://localhost:8000/api/releases/");
+        const releasesData = await releasesRes.json();
+        setReleases(releasesData.filter((r: any) => r.status !== "released").slice(0, 3));
+      } catch (err) {
+        console.error("Error fetching releases:", err);
+      }
 
       setLastUpdated(new Date());
       setLoading(false);
@@ -209,7 +259,7 @@ export default function Index() {
                 {projects.map((project) => (
                   <ProjectCard
                     key={project.id}
-                    id={project.id}
+                    id={String(project.id)}
                     name={project.name}
                     description={project.description}
                     riskScore={parseFloat((Math.random() * 50 + 20).toFixed(1))}
@@ -219,7 +269,7 @@ export default function Index() {
                       project.target_release_date
                     ).toLocaleDateString()}
                     team={3}
-                    status={project.status}
+                    status={(project.status as "on-track" | "at-risk" | "blocked") || "on-track"}
                   />
                 ))}
               </div>
@@ -228,21 +278,33 @@ export default function Index() {
 
           {/* Right Column - Approvals, Activity, AI */}
           <div className="space-y-6">
-            {/* Release Approval */}
-            <ReleaseApprovalCard
-              version="v2.4.0"
-              project="Project Alpha"
-              releaseDate="Jan 15, 2026"
-              riskScore={metrics.overall_risk_score}
-              status="pending"
-              approvers={mockApprovers}
-            />
+            {/* Release Approval - Show first pending release or first release */}
+            {releases.length > 0 ? (
+              <ReleaseApprovalCard
+                version={releases[0].version}
+                project={projects.find(p => p.id === releases[0].project_id)?.name || "Unknown Project"}
+                releaseDate={new Date(releases[0].planned_release_date).toLocaleDateString()}
+                riskScore={releases[0].risk_score || metrics?.overall_risk_score || 0}
+                status={(releases[0].go_no_go_decision?.toLowerCase() as any) || "pending"}
+                approvers={mockApprovers}
+                releaseId={releases[0].id}
+              />
+            ) : (
+              <ReleaseApprovalCard
+                version="No pending releases"
+                project="All projects"
+                releaseDate="—"
+                riskScore={0}
+                status="pending"
+                approvers={[]}
+              />
+            )}
 
             {/* AI Insights */}
             <AIInsightsPanel />
 
             {/* Activity Feed */}
-            <ActivityFeed />
+            <ActivityFeed activities={activities as any} />
           </div>
         </div>
       </div>
