@@ -26,9 +26,10 @@ app.add_middleware(
 )
 
 # Import routes
-from app.routes import projects, requirements, test_cases, defects, releases, metrics
+from app.routes import projects, requirements, test_cases, defects, releases, metrics, auth
 
 # Include routers
+app.include_router(auth.router)
 app.include_router(projects.router, prefix="/api/projects", tags=["Projects"])
 app.include_router(requirements.router, prefix="/api/requirements", tags=["Requirements"])
 app.include_router(test_cases.router, prefix="/api/test-cases", tags=["Test Cases"])

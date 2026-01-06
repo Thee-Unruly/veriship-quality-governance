@@ -10,6 +10,41 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 
+# ========== Authentication & Users ==========
+
+class User(Base):
+    """User accounts for authentication."""
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(255), unique=True, nullable=False, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    
+    first_name = Column(String(255))
+    last_name = Column(String(255))
+    role = Column(String(100), default="member")  # admin, lead, member, viewer
+    
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_login = Column(DateTime, nullable=True)
+    
+    # Relationships
+    assigned_projects = relationship("Project", back_populates="assigned_users", secondary="user_project_assignment")
+
+
+class UserProjectAssignment(Base):
+    """Association between users and projects."""
+    __tablename__ = "user_project_assignment"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    role = Column(String(100), default="member")  # lead, member, viewer, etc
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # ========== Enums ==========
 
 class ProjectStatus(str, PyEnum):
@@ -96,6 +131,7 @@ class Project(Base):
     defects = relationship("Defect", back_populates="project", cascade="all, delete-orphan")
     releases = relationship("Release", back_populates="project", cascade="all, delete-orphan")
     team_members = relationship("TeamMember", back_populates="project", cascade="all, delete-orphan")
+    assigned_users = relationship("User", back_populates="assigned_projects", secondary="user_project_assignment")
 
 
 class Requirement(Base):

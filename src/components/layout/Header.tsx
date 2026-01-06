@@ -1,4 +1,4 @@
-import { Bell, Search, HelpCircle, User } from "lucide-react";
+import { Bell, Search, HelpCircle, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -10,8 +10,58 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+
+interface UserInfo {
+  id: number;
+  username: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  role: string;
+}
 
 export function Header() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState<UserInfo | null>(null);
+
+  useEffect(() => {
+    // Get user from localStorage
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        setUser(JSON.parse(userStr));
+      } catch (err) {
+        console.error("Error parsing user:", err);
+      }
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("user");
+    toast.success("Logged out successfully!");
+    navigate("/login");
+  };
+
+  const handleProfileClick = () => {
+    navigate("/profile");
+  };
+
+  const displayName =
+    user && (user.first_name || user.last_name)
+      ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
+      : user?.username || "User";
+
+  const initials =
+    displayName
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase() || "U";
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {/* Search */}
@@ -64,9 +114,9 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full">
               <Avatar className="h-9 w-9">
-                <AvatarImage src="/placeholder.svg" alt="User" />
+                <AvatarImage src="/placeholder.svg" alt={displayName} />
                 <AvatarFallback className="bg-accent text-accent-foreground">
-                  QA
+                  {initials}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -74,18 +124,19 @@ export function Header() {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium">Sarah Chen</p>
-                <p className="text-xs text-muted-foreground">QA Lead</p>
+                <p className="text-sm font-medium">{displayName}</p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={handleProfileClick}>
               <User className="mr-2 h-4 w-4" />
-              Profile
+              My Profile
             </DropdownMenuItem>
             <DropdownMenuItem>Settings</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+              <LogOut className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
