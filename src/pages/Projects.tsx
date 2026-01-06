@@ -3,14 +3,17 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FolderKanban, Plus, Trash2 } from "lucide-react";
+import { FolderKanban, Plus, Trash2, Edit2 } from "lucide-react";
 import { CreateProjectModal } from "@/components/modals/CreateProjectModal";
+import { EditProjectModal } from "@/components/modals/EditProjectModal";
 import { useCrud } from "@/hooks/use-crud";
 
 export default function Projects() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
 
   const { delete: deleteProject } = useCrud({
     baseUrl: "http://localhost:8000/api/projects",
@@ -40,6 +43,11 @@ export default function Projects() {
     }
   };
 
+  const handleEdit = (project: any) => {
+    setSelectedProject(project);
+    setIsEditModalOpen(true);
+  };
+
   if (loading) return <div className="p-6">Loading projects...</div>;
 
   return (
@@ -50,7 +58,7 @@ export default function Projects() {
             <h1 className="text-3xl font-bold text-foreground">Projects</h1>
             <p className="text-muted-foreground">Manage your organization's projects</p>
           </div>
-          <Button onClick={() => setIsModalOpen(true)}>
+          <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Project
           </Button>
@@ -87,6 +95,13 @@ export default function Projects() {
                       >
                         {project.status}
                       </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(project)}
+                      >
+                        <Edit2 className="h-4 w-4 text-blue-500" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -129,8 +144,14 @@ export default function Projects() {
       </div>
 
       <CreateProjectModal
-        isOpen={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        isOpen={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        onSuccess={fetchProjects}
+      />
+      <EditProjectModal
+        isOpen={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        project={selectedProject}
         onSuccess={fetchProjects}
       />
     </DashboardLayout>
