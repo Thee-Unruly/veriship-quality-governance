@@ -19,6 +19,14 @@ class ReleaseCreate(BaseModel):
     planned_release_date: Optional[datetime] = None
 
 
+class ReleaseUpdate(BaseModel):
+    """Release update schema."""
+    version: Optional[str] = None
+    status: Optional[ReleaseStatus] = None
+    planned_release_date: Optional[datetime] = None
+    go_no_go_decision: Optional[str] = None
+
+
 class ReleaseResponse(BaseModel):
     """Release response schema."""
     id: int
@@ -54,3 +62,41 @@ def create_release(release: ReleaseCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_release)
     return db_release
+
+
+@router.put("/{release_id}", response_model=ReleaseResponse)
+def update_release(
+    release_id: int,
+    release_update: ReleaseUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update a release."""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    
+    if release_update.version:
+        release.version = release_update.version
+    if release_update.status:
+        release.status = release_update.status
+    if release_update.planned_release_date:
+        release.planned_release_date = release_update.planned_release_date
+    if release_update.go_no_go_decision:
+        release.go_no_go_decision = release_update.go_no_go_decision
+    
+    db.commit()
+    db.refresh(release)
+    return release
+
+
+@router.delete("/{release_id}")
+def delete_release(release_id: int, db: Session = Depends(get_db)):
+    """Delete a release."""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    
+    db.delete(release)
+    db.commit()
+    return {"status": "deleted"}
+

@@ -21,6 +21,15 @@ class DefectCreate(BaseModel):
     found_by: Optional[str] = None
 
 
+class DefectUpdate(BaseModel):
+    """Defect update schema."""
+    title: Optional[str] = None
+    description: Optional[str] = None
+    severity: Optional[DefectSeverity] = None
+    status: Optional[DefectStatus] = None
+    found_by: Optional[str] = None
+
+
 class DefectResponse(BaseModel):
     """Defect response schema."""
     id: int
@@ -58,3 +67,43 @@ def create_defect(defect: DefectCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_defect)
     return db_defect
+
+
+@router.put("/{defect_id}", response_model=DefectResponse)
+def update_defect(
+    defect_id: int,
+    defect_update: DefectUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update a defect."""
+    defect = db.query(Defect).filter(Defect.id == defect_id).first()
+    if not defect:
+        raise HTTPException(status_code=404, detail="Defect not found")
+    
+    if defect_update.title:
+        defect.title = defect_update.title
+    if defect_update.description:
+        defect.description = defect_update.description
+    if defect_update.severity:
+        defect.severity = defect_update.severity
+    if defect_update.status:
+        defect.status = defect_update.status
+    if defect_update.found_by:
+        defect.found_by = defect_update.found_by
+    
+    db.commit()
+    db.refresh(defect)
+    return defect
+
+
+@router.delete("/{defect_id}")
+def delete_defect(defect_id: int, db: Session = Depends(get_db)):
+    """Delete a defect."""
+    defect = db.query(Defect).filter(Defect.id == defect_id).first()
+    if not defect:
+        raise HTTPException(status_code=404, detail="Defect not found")
+    
+    db.delete(defect)
+    db.commit()
+    return {"status": "deleted"}
+

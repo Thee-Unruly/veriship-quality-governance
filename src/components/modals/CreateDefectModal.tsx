@@ -1,0 +1,128 @@
+import { useState } from "react";
+import { FormModal } from "@/components/ui/form-modal";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { useCrud } from "@/hooks/use-crud";
+
+interface CreateDefectModalProps {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+    projectId: number;
+    onSuccess: () => void;
+}
+
+export function CreateDefectModal({
+    isOpen,
+    onOpenChange,
+    projectId,
+    onSuccess,
+}: CreateDefectModalProps) {
+    const [defectId, setDefectId] = useState("");
+    const [title, setTitle] = useState("");
+    const [description, setDescription] = useState("");
+    const [severity, setSeverity] = useState<string>("MEDIUM");
+    const [foundBy, setFoundBy] = useState("");
+
+    const { create, loading } = useCrud({
+        baseUrl: "http://localhost:8000/api/defects",
+        onSuccess: () => {
+            setDefectId("");
+            setTitle("");
+            setDescription("");
+            setSeverity("MEDIUM");
+            setFoundBy("");
+            onOpenChange(false);
+            onSuccess();
+        },
+    });
+
+    const handleSubmit = async () => {
+        if (!defectId.trim() || !title.trim()) return;
+
+        await create({
+            project_id: projectId,
+            defect_id: defectId,
+            title,
+            description,
+            severity: severity as any,
+            found_by: foundBy || undefined,
+        } as any);
+    };
+
+    return (
+        <FormModal
+            isOpen={isOpen}
+            onOpenChange={onOpenChange}
+            title="Create New Defect"
+            description="Log a new defect for this project"
+            onSubmit={handleSubmit}
+            isLoading={loading}
+        >
+            <div className="space-y-4">
+                <div>
+                    <Label htmlFor="defect-id">Defect ID *</Label>
+                    <Input
+                        id="defect-id"
+                        placeholder="e.g., DEF-001"
+                        value={defectId}
+                        onChange={(e) => setDefectId(e.target.value)}
+                        disabled={loading}
+                    />
+                </div>
+                <div>
+                    <Label htmlFor="title">Title *</Label>
+                    <Input
+                        id="title"
+                        placeholder="Defect title"
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        disabled={loading}
+                    />
+                </div>
+                <div>
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                        id="description"
+                        placeholder="Detailed description of the defect"
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        disabled={loading}
+                        rows={3}
+                    />
+                </div>
+                <div>
+                    <Label htmlFor="severity">Severity *</Label>
+                    <Select value={severity} onValueChange={setSeverity} disabled={loading}>
+                        <SelectTrigger id="severity">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="CRITICAL">Critical</SelectItem>
+                            <SelectItem value="HIGH">High</SelectItem>
+                            <SelectItem value="MEDIUM">Medium</SelectItem>
+                            <SelectItem value="LOW">Low</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div>
+                    <Label htmlFor="found-by">Found By</Label>
+                    <Input
+                        id="found-by"
+                        placeholder="Tester name"
+                        value={foundBy}
+                        onChange={(e) => setFoundBy(e.target.value)}
+                        disabled={loading}
+                    />
+                </div>
+            </div>
+        </FormModal>
+    );
+}
