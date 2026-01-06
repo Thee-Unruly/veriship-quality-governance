@@ -3,15 +3,18 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckSquare, Plus, Trash2 } from "lucide-react";
+import { CheckSquare, Plus, Trash2, Edit2 } from "lucide-react";
 import { CreateTestCaseModal } from "@/components/modals/CreateTestCaseModal";
+import { EditTestCaseModal } from "@/components/modals/EditTestCaseModal";
 import { useCrud } from "@/hooks/use-crud";
 
 export default function TestCases() {
   const [testCases, setTestCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedTestCase, setSelectedTestCase] = useState<any>(null);
 
   // Define fetch function first so it can be used in useCrud and useEffect
   async function fetchTestCases() {
@@ -41,6 +44,11 @@ export default function TestCases() {
     }
   };
 
+  const handleEdit = (testCase: any) => {
+    setSelectedTestCase(testCase);
+    setIsEditModalOpen(true);
+  };
+
   if (loading) return <div className="p-6">Loading test cases...</div>;
 
   return (
@@ -51,7 +59,7 @@ export default function TestCases() {
             <h1 className="text-3xl font-bold text-foreground">Test Cases</h1>
             <p className="text-muted-foreground">Design, execute, and manage test cases</p>
           </div>
-          <Button onClick={() => setIsModalOpen(true)}>
+          <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Test Case
           </Button>
@@ -102,6 +110,13 @@ export default function TestCases() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleEdit(tc)}
+                      >
+                        <Edit2 className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDelete(tc.id)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -136,9 +151,15 @@ export default function TestCases() {
       </div>
 
       <CreateTestCaseModal
-        isOpen={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        isOpen={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
         projectId={selectedProject}
+        onSuccess={fetchTestCases}
+      />
+      <EditTestCaseModal
+        isOpen={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        testCase={selectedTestCase}
         onSuccess={fetchTestCases}
       />
     </DashboardLayout>

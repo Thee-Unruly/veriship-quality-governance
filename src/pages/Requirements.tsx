@@ -3,15 +3,18 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, Trash2 } from "lucide-react";
+import { FileText, Plus, Trash2, Edit2 } from "lucide-react";
 import { CreateRequirementModal } from "@/components/modals/CreateRequirementModal";
+import { EditRequirementModal } from "@/components/modals/EditRequirementModal";
 import { useCrud } from "@/hooks/use-crud";
 
 export default function Requirements() {
   const [requirements, setRequirements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
 
   // Define fetch function
   const fetchRequirements = async () => {
@@ -41,6 +44,11 @@ export default function Requirements() {
     }
   };
 
+  const handleEdit = (requirement: any) => {
+    setSelectedRequirement(requirement);
+    setIsEditModalOpen(true);
+  };
+
   if (loading) return <div className="p-6">Loading requirements...</div>;
 
   return (
@@ -51,7 +59,7 @@ export default function Requirements() {
             <h1 className="text-3xl font-bold text-foreground">Requirements</h1>
             <p className="text-muted-foreground">Manage and track requirements with AI-powered analysis</p>
           </div>
-          <Button onClick={() => setIsModalOpen(true)}>
+          <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Requirement
           </Button>
@@ -110,6 +118,13 @@ export default function Requirements() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleEdit(req)}
+                      >
+                        <Edit2 className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDelete(req.id)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -144,9 +159,15 @@ export default function Requirements() {
       </div>
 
       <CreateRequirementModal
-        isOpen={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        isOpen={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
         projectId={selectedProject}
+        onSuccess={fetchRequirements}
+      />
+      <EditRequirementModal
+        isOpen={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        requirement={selectedRequirement}
         onSuccess={fetchRequirements}
       />
     </DashboardLayout>

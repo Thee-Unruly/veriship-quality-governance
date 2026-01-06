@@ -3,15 +3,18 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Rocket, Plus, Trash2 } from "lucide-react";
+import { Rocket, Plus, Trash2, Edit2 } from "lucide-react";
 import { CreateReleaseModal } from "@/components/modals/CreateReleaseModal";
+import { EditReleaseModal } from "@/components/modals/EditReleaseModal";
 import { useCrud } from "@/hooks/use-crud";
 
 export default function Releases() {
   const [releases, setReleases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedRelease, setSelectedRelease] = useState<any>(null);
 
   const { delete: deleteRelease } = useCrud({
     baseUrl: "http://localhost:8000/api/releases",
@@ -41,6 +44,11 @@ export default function Releases() {
     }
   };
 
+  const handleEdit = (release: any) => {
+    setSelectedRelease(release);
+    setIsEditModalOpen(true);
+  };
+
   if (loading) return <div className="p-6">Loading releases...</div>;
 
   const getStatusColor = (status) => {
@@ -64,7 +72,7 @@ export default function Releases() {
             <h1 className="text-3xl font-bold text-foreground">Releases</h1>
             <p className="text-muted-foreground">Manage release governance and approvals</p>
           </div>
-          <Button onClick={() => setIsModalOpen(true)}>
+          <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Release
           </Button>
@@ -117,6 +125,13 @@ export default function Releases() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleEdit(release)}
+                      >
+                        <Edit2 className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDelete(release.id)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -157,13 +172,17 @@ export default function Releases() {
       </div>
 
       <CreateReleaseModal
-        isOpen={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        isOpen={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
         projectId={selectedProject}
+        onSuccess={fetchReleases}
+      />
+      <EditReleaseModal
+        isOpen={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        release={selectedRelease}
         onSuccess={fetchReleases}
       />
     </DashboardLayout>
   );
-
-  return null;
 }

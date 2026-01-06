@@ -3,15 +3,18 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bug, Plus, Trash2 } from "lucide-react";
+import { Bug, Plus, Trash2, Edit2 } from "lucide-react";
 import { CreateDefectModal } from "@/components/modals/CreateDefectModal";
+import { EditDefectModal } from "@/components/modals/EditDefectModal";
 import { useCrud } from "@/hooks/use-crud";
 
 export default function Defects() {
   const [defects, setDefects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedProject, setSelectedProject] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedDefect, setSelectedDefect] = useState<any>(null);
 
   const { delete: deleteDefect } = useCrud({
     baseUrl: "http://localhost:8000/api/defects",
@@ -41,6 +44,11 @@ export default function Defects() {
     }
   };
 
+  const handleEdit = (defect: any) => {
+    setSelectedDefect(defect);
+    setIsEditModalOpen(true);
+  };
+
   if (loading) return <div className="p-6">Loading defects...</div>;
 
   const getSeverityColor = (severity) => {
@@ -66,7 +74,7 @@ export default function Defects() {
             <h1 className="text-3xl font-bold text-foreground">Defects</h1>
             <p className="text-muted-foreground">Track and manage defects across projects</p>
           </div>
-          <Button onClick={() => setIsModalOpen(true)}>
+          <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             New Defect
           </Button>
@@ -120,6 +128,13 @@ export default function Defects() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleEdit(defect)}
+                      >
+                        <Edit2 className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDelete(defect.id)}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -158,9 +173,15 @@ export default function Defects() {
       </div>
 
       <CreateDefectModal
-        isOpen={isModalOpen}
-        onOpenChange={setIsModalOpen}
+        isOpen={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
         projectId={selectedProject}
+        onSuccess={fetchDefects}
+      />
+      <EditDefectModal
+        isOpen={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        defect={selectedDefect}
         onSuccess={fetchDefects}
       />
     </DashboardLayout>
