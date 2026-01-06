@@ -70,7 +70,7 @@ export default function Projects() {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {projects.map((project) => (
+            {projects.map((project: any) => (
               <Card key={project.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
@@ -78,7 +78,7 @@ export default function Projects() {
                     <div className="flex gap-2">
                       <Badge
                         variant={
-                          project.status === "active"
+                          project.status === "active" || project.status === "on-track"
                             ? "default"
                             : project.status === "at-risk"
                               ? "destructive"
@@ -134,59 +134,5 @@ export default function Projects() {
         onSuccess={fetchProjects}
       />
     </DashboardLayout>
-  );
-}
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <FolderKanban className="h-5 w-5" />
-                        {project.name}
-                      </CardTitle>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        {project.description}
-                      </p>
-                    </div>
-                    <Badge
-                      variant={
-                        project.status === "on-track"
-                          ? "default"
-                          : project.status === "at-risk"
-                            ? "destructive"
-                            : "secondary"
-                      }
-                    >
-                      {project.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Status</p>
-                      <p className="font-semibold capitalize">{project.status}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Created</p>
-                      <p className="font-semibold">
-                        {new Date(project.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Release Date</p>
-                      <p className="font-semibold">
-                        {project.target_release_date
-                          ? new Date(project.target_release_date).toLocaleDateString()
-                          : "Not set"}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card >
-            ))}
-          </div >
-        )}
-      </div >
-    </DashboardLayout >
   );
 }
