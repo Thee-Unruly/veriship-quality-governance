@@ -8,8 +8,11 @@ from app.models import User
 from pydantic import BaseModel
 from datetime import datetime
 import bcrypt
-import jwt
 from typing import Optional
+try:
+    import jwt
+except ImportError:
+    from jwt import PyJWT as jwt
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -69,8 +72,17 @@ def verify_password(password: str, hash: str) -> bool:
 def create_token(user_id: int) -> str:
     """Create JWT token."""
     payload = {"sub": str(user_id)}
-    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-    return token
+    try:
+        token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+        # PyJWT 2.0+ returns string directly
+        if isinstance(token, bytes):
+            token = token.decode('utf-8')
+        return token
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Token creation failed: {str(e)}"
+        )
 
 
 def get_current_user(token: str = None, db: Session = Depends(get_db)) -> User:
