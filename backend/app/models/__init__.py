@@ -151,6 +151,7 @@ class Requirement(Base):
     is_testable = Column(Boolean, default=True)
     missing_criteria = Column(JSON, default=list)  # AI suggestions
     ambiguous_terms = Column(JSON, default=list)  # Flagged issues
+    suggestions = Column(JSON, default=list)  # General improvement suggestions
     
     priority = Column(Integer, default=1)  # 1=High, 5=Low
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -3,9 +3,10 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Rocket, Plus, Trash2, Edit2 } from "lucide-react";
+import { Rocket, Plus, Trash2, Edit2, Sparkles } from "lucide-react";
 import { CreateReleaseModal } from "@/components/modals/CreateReleaseModal";
 import { EditReleaseModal } from "@/components/modals/EditReleaseModal";
+import { CheckReleaseReadinessModal } from "@/components/copilot/CheckReleaseReadinessModal";
 import { useCrud } from "@/hooks/use-crud";
 
 export default function Releases() {
@@ -14,6 +15,7 @@ export default function Releases() {
   const [selectedProject, setSelectedProject] = useState(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isReadinessModalOpen, setIsReadinessModalOpen] = useState(false);
   const [selectedRelease, setSelectedRelease] = useState<any>(null);
 
   const { delete: deleteRelease } = useCrud({
@@ -47,6 +49,11 @@ export default function Releases() {
   const handleEdit = (release: any) => {
     setSelectedRelease(release);
     setIsEditModalOpen(true);
+  };
+
+  const handleCheckReadiness = (release: any) => {
+    setSelectedRelease(release);
+    setIsReadinessModalOpen(true);
   };
 
   if (loading) return <div className="p-6">Loading releases...</div>;
@@ -125,6 +132,14 @@ export default function Releases() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleCheckReadiness(release)}
+                        title="Check release readiness"
+                      >
+                        <Sparkles className="h-4 w-4 text-accent" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleEdit(release)}
                       >
                         <Edit2 className="h-4 w-4 text-blue-500" />
@@ -183,6 +198,14 @@ export default function Releases() {
         release={selectedRelease}
         onSuccess={fetchReleases}
       />
+      {selectedRelease && (
+        <CheckReleaseReadinessModal
+          isOpen={isReadinessModalOpen}
+          onOpenChange={setIsReadinessModalOpen}
+          releaseId={selectedRelease.id}
+          releaseVersion={selectedRelease.version || selectedRelease.release_id}
+        />
+      )}
     </DashboardLayout>
   );
 }
