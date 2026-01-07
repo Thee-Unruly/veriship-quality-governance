@@ -1,5 +1,6 @@
 """Test Case routes."""
 
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -46,6 +47,35 @@ class TestCaseResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class BatchTestCaseCreate(BaseModel):
+    project_id: int
+    requirement_id: Optional[int] = None
+    test_cases: List[dict]  # Each dict should match GeneratedTestCase schema
+
+
+@router.post("/batch-add", response_model=List[TestCaseResponse])
+def batch_add_test_cases(batch: BatchTestCaseCreate, db: Session = Depends(get_db)):
+    """Batch add test cases (for AI-generated or bulk import)."""
+    created = []
+    for tc in batch.test_cases:
+        db_tc = TestCase(
+            project_id=batch.project_id,
+            requirement_id=batch.requirement_id,
+            test_case_id=tc.get("test_case_id") or f"AI-TC-{datetime.utcnow().timestamp()}-{len(created)+1}",
+            title=tc["title"],
+            description=tc.get("description"),
+            test_type=tc.get("test_type", "manual"),
+            priority=tc.get("priority", 1),
+            test_steps=tc.get("test_steps", []),
+            expected_result=tc.get("expected_result", "")
+        )
+        db.add(db_tc)
+        db.commit()
+        db.refresh(db_tc)
+        created.append(db_tc)
+    return created
 
 
 @router.get("/{project_id}", response_model=List[TestCaseResponse])

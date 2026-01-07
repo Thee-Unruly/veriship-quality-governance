@@ -1,6 +1,6 @@
 """API endpoints for the Quality Copilot AI features."""
 
-import time
+import json
 import requests
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -19,7 +19,7 @@ from app.schemas.copilot import (
 router = APIRouter()
 
 
-async def call_openrouter(api_key: str, user_message: str) -> str:
+def call_openrouter(api_key: str, user_message: str) -> str:
     """Call OpenRouter API with error handling."""
     try:
         response = requests.post(
@@ -100,9 +100,6 @@ Only respond with valid JSON, no additional text."""
             prompt
         )
         
-        # Parse AI response
-        import json
-        
         # Extract JSON from response (sometimes models add extra text)
         json_start = ai_response.find('{')
         json_end = ai_response.rfind('}') + 1
@@ -121,7 +118,7 @@ Only respond with valid JSON, no additional text."""
         requirement.missing_criteria = analysis_result.missing_criteria
         db.commit()
         db.refresh(requirement)
-
+        
         return analysis_result
     
     except json.JSONDecodeError as e:
@@ -181,9 +178,6 @@ Generate at least 3-5 test cases. Only respond with valid JSON, no additional te
             prompt
         )
         
-        # Parse AI response
-        import json
-        
         # Extract JSON from response
         json_start = ai_response.find('{')
         json_end = ai_response.rfind('}') + 1
@@ -200,7 +194,6 @@ Generate at least 3-5 test cases. Only respond with valid JSON, no additional te
             status_code=500,
             detail=f"Failed to parse AI response: {str(e)}"
         )
-
 
 
 @router.post(
@@ -271,9 +264,7 @@ Only respond with valid JSON, no additional text."""
             prompt
         )
         
-        # Parse AI response
-        import json
-        
+        # Extract JSON from response
         json_start = ai_response.find('{')
         json_end = ai_response.rfind('}') + 1
         if json_start != -1 and json_end > json_start:

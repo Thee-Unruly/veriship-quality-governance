@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        # Add this line below to stop the crashing
+        extra = "ignore"
 
 
 settings = Settings()
