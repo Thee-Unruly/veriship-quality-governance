@@ -21,6 +21,7 @@ class TestCaseCreate(BaseModel):
     description: Optional[str] = None
     test_type: str = "manual"
     priority: Optional[int] = 1
+    status: Optional[str] = "ongoing"
 
 
 class TestCaseUpdate(BaseModel):
@@ -30,6 +31,7 @@ class TestCaseUpdate(BaseModel):
     test_type: Optional[str] = None
     priority: Optional[int] = None
     is_automated: Optional[bool] = None
+    status: Optional[str] = None
 
 
 class TestCaseResponse(BaseModel):
@@ -43,6 +45,7 @@ class TestCaseResponse(BaseModel):
     priority: int
     coverage_status: float
     is_automated: bool
+    status: str
     created_at: datetime
 
     class Config:
@@ -69,7 +72,8 @@ def batch_add_test_cases(batch: BatchTestCaseCreate, db: Session = Depends(get_d
             test_type=tc.get("test_type", "manual"),
             priority=tc.get("priority", 1),
             test_steps=tc.get("test_steps", []),
-            expected_result=tc.get("expected_result", "")
+            expected_result=tc.get("expected_result", ""),
+            status=tc.get("status", "ongoing")
         )
         db.add(db_tc)
         db.commit()
@@ -79,9 +83,12 @@ def batch_add_test_cases(batch: BatchTestCaseCreate, db: Session = Depends(get_d
 
 
 @router.get("/{project_id}", response_model=List[TestCaseResponse])
-def list_test_cases(project_id: int, db: Session = Depends(get_db)):
-    """List test cases for a project."""
-    test_cases = db.query(TestCase).filter(TestCase.project_id == project_id).all()
+def list_test_cases(project_id: int, status: Optional[str] = None, db: Session = Depends(get_db)):
+    """List test cases for a project. Optional `status` filter (ongoing/completed/archived)."""
+    query = db.query(TestCase).filter(TestCase.project_id == project_id)
+    if status:
+        query = query.filter(TestCase.status == status)
+    test_cases = query.all()
     return test_cases
 
 
@@ -96,6 +103,7 @@ def create_test_case(tc: TestCaseCreate, db: Session = Depends(get_db)):
         description=tc.description,
         test_type=tc.test_type,
         priority=tc.priority,
+        status=tc.status or "ongoing",
     )
     db.add(db_tc)
     db.commit()
@@ -124,6 +132,8 @@ def update_test_case(
         test_case.priority = tc_update.priority
     if tc_update.is_automated is not None:
         test_case.is_automated = tc_update.is_automated
+    if tc_update.status is not None:
+        test_case.status = tc_update.status
     
     db.commit()
     db.refresh(test_case)

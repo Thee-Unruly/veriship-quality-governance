@@ -10,11 +10,9 @@ import Requirements from "./pages/Requirements";
 import TestCases from "./pages/TestCases";
 import Defects from "./pages/Defects";
 import Releases from "./pages/Releases";
-import Analytics from "./pages/Analytics";
-import Compliance from "./pages/Compliance";
-import Team from "./pages/Team";
+// Analytics, Compliance, and Team pages removed
 import Settings from "./pages/Settings";
-import Copilot from "./pages/Copilot";
+import CopilotGuide from "./pages/CopilotGuide";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -48,23 +46,29 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
+        <Toaster />
         <Sonner />
-        <BrowserRouter>
+        {/* Added future flags here to remove console warnings */}
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<ProtectedRoute element={<Index />} />} />
+
+            {/* Project Routes */}
             <Route path="/projects" element={<ProtectedRoute element={<Projects />} />} />
+            {/* This handles /projects/1, /projects/2, etc. */}
+            <Route path="/projects/:id" element={<ProtectedRoute element={<Projects />} />} />
+
             <Route path="/requirements" element={<ProtectedRoute element={<Requirements />} />} />
+            <Route path="/help/copilot" element={<ProtectedRoute element={<CopilotGuide />} />} />
             <Route path="/test-cases" element={<ProtectedRoute element={<TestCases />} />} />
             <Route path="/defects" element={<ProtectedRoute element={<Defects />} />} />
             <Route path="/releases" element={<ProtectedRoute element={<Releases />} />} />
-            <Route path="/analytics" element={<ProtectedRoute element={<Analytics />} />} />
-            <Route path="/compliance" element={<ProtectedRoute element={<Compliance />} />} />
-            <Route path="/team" element={<ProtectedRoute element={<Team />} />} />
+            {/* Analytics, Compliance, and Team routes removed */}
             <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
-            <Route path="/copilot" element={<ProtectedRoute element={<Copilot />} />} />
             <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+            {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

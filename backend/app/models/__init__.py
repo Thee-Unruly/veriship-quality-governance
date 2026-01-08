@@ -195,6 +195,8 @@ class TestCase(Base):
     risk_area = Column(String(255))  # security, performance, data, compliance
     edge_cases = Column(JSON, default=list)  # AI-suggested edge cases
     coverage_status = Column(Float, default=0.0)  # 0-100%
+    # Lifecycle status: ongoing, completed, archived
+    status = Column(String(50), default="ongoing")
     
     # Steps (for manual tests)
     test_steps = Column(JSON, default=list)

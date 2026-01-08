@@ -57,20 +57,60 @@ export function GenerateTestCasesModal({
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<GenerationResult | null>(null);
     const [copied, setCopied] = useState<number | null>(null);
+    const [selected, setSelected] = useState<Set<number>>(new Set());
+    const [saving, setSaving] = useState(false);
     const { toast } = useToast();
+    const handleSelect = (idx: number) => {
+        setSelected(prev => {
+            const next = new Set(prev);
+            if (next.has(idx)) {
+                next.delete(idx);
+            } else {
+                next.add(idx);
+            }
+            return next;
+        });
+    };
+
+    const handleSaveSelected = async () => {
+        if (!result) return;
+        setSaving(true);
+        try {
+            const selectedCases = result.generated_test_cases.filter((_, idx) => selected.has(idx));
+            if (selectedCases.length === 0) {
+                toast({ title: "No test cases selected", description: "Please select at least one test case to save.", variant: "destructive" });
+                setSaving(false);
+                return;
+            }
+            const payload = {
+                project_id: 1, // TODO: Replace with actual project ID in your context
+                requirement_id: requirementId,
+                test_cases: selectedCases
+            };
+            const resp = await fetch("http://localhost:8000/api/test-cases/batch-add", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            if (!resp.ok) throw new Error("Failed to save test cases");
+            toast({ title: "Saved", description: `${selectedCases.length} test cases added to project.` });
+            setSelected(new Set());
+        } catch (error) {
+            toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to save test cases", variant: "destructive" });
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const handleGenerate = async () => {
         setLoading(true);
         try {
-            const response = await fetch(
-                `http://localhost:8000/api/copilot/generate-test-cases/${requirementId}`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
+            const response = await fetch(`http://localhost:8000/api/copilot/generate-test-cases/${requirementId}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
 
             if (!response.ok) {
                 throw new Error("Failed to generate test cases");
@@ -99,17 +139,17 @@ export function GenerateTestCasesModal({
 
     const handleCopy = (idx: number, testCase: GeneratedTestCase) => {
         const text = `
-Title: ${testCase.title}
-Description: ${testCase.description || "N/A"}
-Type: ${testCase.test_type}
-Priority: ${priorityLabels[testCase.priority]}
+    Title: ${testCase.title}
+    Description: ${testCase.description || "N/A"}
+    Type: ${testCase.test_type}
+    Priority: ${priorityLabels[testCase.priority]}
 
-Test Steps:
-${testCase.test_steps.map((step, i) => `${i + 1}. ${step}`).join("\n")}
+    Test Steps:
+    ${testCase.test_steps.map((step, i) => `${i + 1}. ${step}`).join("\n")}
 
-Expected Result:
-${testCase.expected_result}
-`.trim();
+    Expected Result:
+    ${testCase.expected_result}
+        `.trim();
 
         navigator.clipboard.writeText(text);
         setCopied(idx);
@@ -172,8 +212,14 @@ ${testCase.expected_result}
 
                         <div className="space-y-3">
                             {result.generated_test_cases.map((testCase, idx) => (
-                                <Card key={idx} className="p-4">
-                                    <div className="space-y-3">
+                                <Card key={idx} className="p-4 flex items-start gap-2">
+                                    <input
+                                        type="checkbox"
+                                        checked={selected.has(idx)}
+                                        onChange={() => handleSelect(idx)}
+                                        className="mt-1"
+                                    />
+                                    <div className="space-y-3 w-full">
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex-1">
                                                 <h4 className="font-semibold text-sm">
@@ -242,9 +288,14 @@ ${testCase.expected_result}
                             ))}
                         </div>
 
-                        <Button onClick={handleClose} className="w-full">
-                            Close
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button onClick={handleSaveSelected} disabled={saving || selected.size === 0} className="flex-1">
+                                {saving ? "Saving..." : `Save Selected (${selected.size})`}
+                            </Button>
+                            <Button onClick={handleClose} className="flex-1" variant="secondary">
+                                Close
+                            </Button>
+                        </div>
                     </div>
                 )}
             </DialogContent>

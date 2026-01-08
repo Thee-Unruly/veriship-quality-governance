@@ -1,0 +1,21 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json bun.lockb ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
+COPY src ./src
+COPY public ./public
+COPY index.html vite.config.ts tailwind.config.ts tsconfig.json tsconfig.app.json ./
+COPY postcss.config.js eslint.config.js components.json ./
+
+# Expose port
+EXPOSE 8080
+
+# Run development server
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

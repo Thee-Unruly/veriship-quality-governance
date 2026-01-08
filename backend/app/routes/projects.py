@@ -3,7 +3,15 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Project, ProjectStatus
+from app.models import (
+    Project,
+    ProjectStatus,
+    UserProjectAssignment,
+    QualityMetric,
+    CI_CDPipeline,
+    ProductionIssue,
+    QAInsight,
+)
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
@@ -103,7 +111,25 @@ def delete_project(project_id: int, db: Session = Depends(get_db)):
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    
-    db.delete(project)
-    db.commit()
-    return {"status": "deleted"}
+    try:
+        # Delete related rows that are not configured with ORM cascade
+        db.query(UserProjectAssignment).filter(UserProjectAssignment.project_id == project_id).delete(synchronize_session=False)
+        db.query(QualityMetric).filter(QualityMetric.project_id == project_id).delete(synchronize_session=False)
+        db.query(CI_CDPipeline).filter(CI_CDPipeline.project_id == project_id).delete(synchronize_session=False)
+        db.query(ProductionIssue).filter(ProductionIssue.project_id == project_id).delete(synchronize_session=False)
+        db.query(QAInsight).filter(QAInsight.project_id == project_id).delete(synchronize_session=False)
+
+        db.delete(project)
+        db.commit()
+        return {"status": "deleted"}
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        try:
+            with open("c:/Users/ibrahim.fadhili/Videos/VeriShip/veriship-quality-governance/backend/delete_error.log", "a", encoding="utf-8") as f:
+                f.write(f"Project delete failed for id={project_id}\n")
+                f.write(tb + "\n")
+        except Exception:
+            pass
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Server error, check backend/delete_error.log")

@@ -11,6 +11,8 @@ import { useCrud } from "@/hooks/use-crud";
 export default function TestCases() {
   const [testCases, setTestCases] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentTab, setCurrentTab] = useState<"ongoing" | "completed">("ongoing");
+  const [projects, setProjects] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -19,7 +21,7 @@ export default function TestCases() {
   // Define fetch function first so it can be used in useCrud and useEffect
   async function fetchTestCases() {
     try {
-      const res = await fetch(`http://localhost:8000/api/test-cases/${selectedProject}`);
+      const res = await fetch(`http://localhost:8000/api/test-cases/${selectedProject}?status=${currentTab}`);
       const data = await res.json();
       setTestCases(data);
     } catch (err) {
@@ -37,6 +39,24 @@ export default function TestCases() {
   useEffect(() => {
     fetchTestCases();
   }, [selectedProject]);
+  // fetch projects for the dropdown
+  useEffect(() => {
+    fetch("http://localhost:8000/api/projects/")
+      .then((res) => res.json())
+      .then((data) => {
+        setProjects(data || []);
+        if (!data || data.length === 0) return;
+        if (!data.find((p: any) => p.id === selectedProject)) {
+          setSelectedProject(data[0].id);
+        }
+      })
+      .catch((err) => console.error("Error fetching projects:", err));
+  }, []);
+  useEffect(() => {
+    // refetch when tab changes
+    setLoading(true);
+    fetchTestCases();
+  }, [currentTab]);
 
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this test case?")) {
@@ -47,6 +67,19 @@ export default function TestCases() {
   const handleEdit = (testCase: any) => {
     setSelectedTestCase(testCase);
     setIsEditModalOpen(true);
+  };
+
+  const handleMarkComplete = async (id: number) => {
+    try {
+      await fetch(`http://localhost:8000/api/test-cases/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "completed" }),
+      });
+      fetchTestCases();
+    } catch (err) {
+      console.error("Failed to mark complete", err);
+    }
   };
 
   if (loading) return <div className="p-6">Loading test cases...</div>;
@@ -72,10 +105,29 @@ export default function TestCases() {
             onChange={(e) => setSelectedProject(Number(e.target.value))}
             className="mt-2 rounded border border-input bg-background px-3 py-2"
           >
-            <option value={1}>Project Alpha</option>
-            <option value={2}>Project Beta</option>
-            <option value={3}>Project Gamma</option>
+            {projects.length === 0 ? (
+              <option value="">No projects</option>
+            ) : (
+              projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))
+            )}
           </select>
+        </div>
+
+        <div className="mb-4 flex gap-2">
+          <button
+            className={`px-3 py-1 rounded ${currentTab === "ongoing" ? "bg-accent text-accent-foreground" : "bg-muted"}`}
+            onClick={() => setCurrentTab("ongoing")}
+          >
+            Ongoing
+          </button>
+          <button
+            className={`px-3 py-1 rounded ${currentTab === "completed" ? "bg-accent text-accent-foreground" : "bg-muted"}`}
+            onClick={() => setCurrentTab("completed")}
+          >
+            Completed
+          </button>
         </div>
 
         {testCases.length === 0 ? (
@@ -107,6 +159,9 @@ export default function TestCases() {
                       <Badge variant={tc.is_automated ? "default" : "secondary"}>
                         {tc.is_automated ? "Automated" : "Manual"}
                       </Badge>
+                      <Badge variant={tc.status === "completed" ? "outline" : "default"}>
+                        {tc.status}
+                      </Badge>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -114,6 +169,11 @@ export default function TestCases() {
                       >
                         <Edit2 className="h-4 w-4 text-blue-500" />
                       </Button>
+                      {tc.status !== "completed" && (
+                        <Button variant="ghost" size="sm" onClick={() => handleMarkComplete(tc.id)}>
+                          Mark Complete
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

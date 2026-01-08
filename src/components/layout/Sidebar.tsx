@@ -28,9 +28,6 @@ const navigation = [
 ];
 
 const adminNavigation = [
-  { name: "Analytics", href: "/analytics", icon: BarChart3 },
-  { name: "Compliance", href: "/compliance", icon: Shield },
-  { name: "Team", href: "/team", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -112,20 +109,16 @@ export function Sidebar() {
                 AI Assistant
               </div>
               <Link
-                to="/copilot"
+                to="/help/copilot"
                 className={cn(
                   "nav-item w-full group",
-                  location.pathname === "/copilot" && "nav-item-active"
+                  location.pathname === "/help/copilot" && "nav-item-active"
                 )}
               >
                 <div className="relative">
                   <Sparkles className="h-5 w-5 text-sidebar-primary" />
-                  <span className="absolute -right-1 -top-1 flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sidebar-primary opacity-75"></span>
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-sidebar-primary"></span>
-                  </span>
                 </div>
-                <span className="text-sidebar-foreground">Quality Copilot</span>
+                <span className="text-sidebar-foreground">Copilot Guide</span>
               </Link>
             </div>
           )}

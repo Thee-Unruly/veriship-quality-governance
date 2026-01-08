@@ -11,6 +11,7 @@ import { useCrud } from "@/hooks/use-crud";
 export default function Defects() {
   const [defects, setDefects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -37,6 +38,21 @@ export default function Defects() {
   useEffect(() => {
     fetchDefects();
   }, [selectedProject]);
+
+  // fetch projects for the dropdown
+  useEffect(() => {
+    fetch("http://localhost:8000/api/projects/")
+      .then((res) => res.json())
+      .then((data) => {
+        setProjects(data || []);
+        if (!data || data.length === 0) return;
+        // if current selectedProject not in list, default to first
+        if (!data.find((p: any) => p.id === selectedProject)) {
+          setSelectedProject(data[0].id);
+        }
+      })
+      .catch((err) => console.error("Error fetching projects:", err));
+  }, []);
 
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this defect?")) {
@@ -87,9 +103,13 @@ export default function Defects() {
             onChange={(e) => setSelectedProject(Number(e.target.value))}
             className="mt-2 rounded border border-input bg-background px-3 py-2"
           >
-            <option value={1}>Project Alpha</option>
-            <option value={2}>Project Beta</option>
-            <option value={3}>Project Gamma</option>
+            {projects.length === 0 ? (
+              <option value="">No projects</option>
+            ) : (
+              projects.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))
+            )}
           </select>
         </div>
 

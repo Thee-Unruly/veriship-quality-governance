@@ -19,7 +19,7 @@ export default function Copilot() {
         {
             id: "1",
             role: "assistant",
-            content: "👋 Hello! I'm Maria, your Quality Copilot. I can help you with:\n• Analyzing requirement clarity and testability\n• Generating comprehensive test cases\n• Assessing release readiness\n• Providing QA insights and recommendations\n\nWhat would you like help with today?",
+            content: "👋 Hello! I'm your Quality Copilot. I can help you with:\n• Analyzing requirement clarity and testability\n• Generating comprehensive test cases\n• Assessing release readiness\n• Providing QA insights and recommendations\n\nWhat would you like help with today?",
             timestamp: new Date(),
         },
     ]);
