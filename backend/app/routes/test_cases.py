@@ -4,7 +4,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import TestCase
+from app.models import TestCase, Project
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
@@ -61,6 +61,11 @@ class BatchTestCaseCreate(BaseModel):
 @router.post("/batch-add", response_model=List[TestCaseResponse])
 def batch_add_test_cases(batch: BatchTestCaseCreate, db: Session = Depends(get_db)):
     """Batch add test cases (for AI-generated or bulk import)."""
+    # Validate that the project exists
+    project = db.query(Project).filter(Project.id == batch.project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail=f"Project with id {batch.project_id} not found")
+    
     created = []
     for tc in batch.test_cases:
         db_tc = TestCase(

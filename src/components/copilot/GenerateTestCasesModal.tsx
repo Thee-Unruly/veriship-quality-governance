@@ -17,6 +17,7 @@ interface GenerateTestCasesModalProps {
     onOpenChange: (open: boolean) => void;
     requirementId: number;
     requirementTitle: string;
+    projectId: number;
 }
 
 interface GeneratedTestCase {
@@ -53,6 +54,7 @@ export function GenerateTestCasesModal({
     onOpenChange,
     requirementId,
     requirementTitle,
+    projectId,
 }: GenerateTestCasesModalProps) {
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<GenerationResult | null>(null);
@@ -83,7 +85,7 @@ export function GenerateTestCasesModal({
                 return;
             }
             const payload = {
-                project_id: 1, // TODO: Replace with actual project ID in your context
+                project_id: projectId,
                 requirement_id: requirementId,
                 test_cases: selectedCases
             };

@@ -194,12 +194,15 @@ export default function Requirements() {
             requirementId={selectedRequirement.id}
             requirementTitle={selectedRequirement.title}
           />
-          <GenerateTestCasesModal
-            isOpen={isGenerateTestsModalOpen}
-            onOpenChange={setIsGenerateTestsModalOpen}
-            requirementId={selectedRequirement.id}
-            requirementTitle={selectedRequirement.title}
-          />
+          {typeof selectedProject === 'number' && (
+            <GenerateTestCasesModal
+              isOpen={isGenerateTestsModalOpen}
+              onOpenChange={setIsGenerateTestsModalOpen}
+              requirementId={selectedRequirement.id}
+              requirementTitle={selectedRequirement.title}
+              projectId={selectedProject}
+            />
+          )}
         </>
       )}
     </DashboardLayout>
