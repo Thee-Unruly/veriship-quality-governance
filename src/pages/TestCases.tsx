@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useProjects } from "@/context/ProjectsContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,14 +13,20 @@ export default function TestCases() {
   const [testCases, setTestCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentTab, setCurrentTab] = useState<"ongoing" | "completed">("ongoing");
-  const [projects, setProjects] = useState<any[]>([]);
-  const [selectedProject, setSelectedProject] = useState(1);
+  const { projects, loading: projectsLoading, refresh } = useProjects();
+  const [selectedProject, setSelectedProject] = useState<number | "">("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any>(null);
 
   // Define fetch function first so it can be used in useCrud and useEffect
   async function fetchTestCases() {
+    if (!selectedProject) {
+      setTestCases([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch(`http://localhost:8000/api/test-cases/${selectedProject}?status=${currentTab}`);
       const data = await res.json();
@@ -39,19 +46,27 @@ export default function TestCases() {
   useEffect(() => {
     fetchTestCases();
   }, [selectedProject]);
-  // fetch projects for the dropdown
+  // Sync selected project when projects list changes
   useEffect(() => {
-    fetch("http://localhost:8000/api/projects/")
-      .then((res) => res.json())
-      .then((data) => {
-        setProjects(data || []);
-        if (!data || data.length === 0) return;
-        if (!data.find((p: any) => p.id === selectedProject)) {
-          setSelectedProject(data[0].id);
-        }
-      })
-      .catch((err) => console.error("Error fetching projects:", err));
+    if (!projects || projects.length === 0) {
+      setSelectedProject("");
+      return;
+    }
+    if (!projects.find((p: any) => p.id === selectedProject)) {
+      setSelectedProject(projects[0].id);
+    }
+  }, [projects]);
+
+  // Ensure projects are fresh when this page mounts
+  useEffect(() => {
+    try {
+      console.debug("[TestCases] calling refresh on mount");
+      refresh();
+    } catch (e) {
+      // ignore
+    }
   }, []);
+
   useEffect(() => {
     // refetch when tab changes
     setLoading(true);

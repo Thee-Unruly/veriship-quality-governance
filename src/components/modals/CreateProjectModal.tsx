@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useCrud } from "@/hooks/use-crud";
+import { useProjects } from "@/context/ProjectsContext";
 
 interface CreateProjectModalProps {
     isOpen: boolean;
@@ -26,14 +27,18 @@ export function CreateProjectModal({
     const [description, setDescription] = useState("");
     const [releaseDate, setReleaseDate] = useState("");
 
+    const { refresh } = useProjects();
+
     const { create, loading } = useCrud({
         baseUrl: "http://localhost:8000/api/projects",
-        onSuccess: () => {
+        onSuccess: async () => {
             setName("");
             setDescription("");
             setReleaseDate("");
             onOpenChange(false);
             onSuccess();
+            // refresh global projects list so other pages update
+            try { await refresh(); } catch (e) { /* ignore */ }
         },
     });
 

@@ -49,6 +49,13 @@ def list_releases(project_id: int, db: Session = Depends(get_db)):
     return releases
 
 
+@router.get("/", response_model=List[ReleaseResponse])
+def list_all_releases(db: Session = Depends(get_db)):
+    """List all releases across projects."""
+    releases = db.query(Release).all()
+    return releases
+
+
 @router.post("/", response_model=ReleaseResponse)
 def create_release(release: ReleaseCreate, db: Session = Depends(get_db)):
     """Create a new release."""

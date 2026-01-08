@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useProjects } from "@/context/ProjectsContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +13,8 @@ import { useCrud } from "@/hooks/use-crud";
 export default function Releases() {
   const [releases, setReleases] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [selectedProject, setSelectedProject] = useState(1);
+  const { projects, loading: projectsLoading, refresh } = useProjects();
+  const [selectedProject, setSelectedProject] = useState<number | "">("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isReadinessModalOpen, setIsReadinessModalOpen] = useState(false);
@@ -25,6 +26,12 @@ export default function Releases() {
   });
 
   function fetchReleases() {
+    if (!selectedProject) {
+      setReleases([]);
+      setLoading(false);
+      return;
+    }
+
     fetch(`http://localhost:8000/api/releases/${selectedProject}`)
       .then((res) => res.json())
       .then((data) => {
@@ -41,18 +48,25 @@ export default function Releases() {
     fetchReleases();
   }, [selectedProject]);
 
-  // fetch projects for the dropdown
+  // Sync selected project when projects list changes
   useEffect(() => {
-    fetch("http://localhost:8000/api/projects/")
-      .then((res) => res.json())
-      .then((data) => {
-        setProjects(data || []);
-        if (!data || data.length === 0) return;
-        if (!data.find((p: any) => p.id === selectedProject)) {
-          setSelectedProject(data[0].id);
-        }
-      })
-      .catch((err) => console.error("Error fetching projects:", err));
+    if (!projects || projects.length === 0) {
+      setSelectedProject("");
+      return;
+    }
+    if (!projects.find((p: any) => p.id === selectedProject)) {
+      setSelectedProject(projects[0].id);
+    }
+  }, [projects]);
+
+  // Ensure projects are fresh when this page mounts
+  useEffect(() => {
+    try {
+      console.debug("[Releases] calling refresh on mount");
+      refresh();
+    } catch (e) {
+      // ignore
+    }
   }, []);
 
   const handleDelete = async (id: number) => {

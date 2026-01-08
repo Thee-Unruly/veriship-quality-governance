@@ -1,41 +1,27 @@
 import { useEffect, useState } from "react";
+import { useProjects } from "@/context/ProjectsContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FolderKanban, Plus, Trash2, Edit2 } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { CreateProjectModal } from "@/components/modals/CreateProjectModal";
 import { EditProjectModal } from "@/components/modals/EditProjectModal";
 import { useCrud } from "@/hooks/use-crud";
 
 export default function Projects() {
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { projects, loading: loading, refresh } = useProjects();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
 
   const { delete: deleteProject } = useCrud({
     baseUrl: "http://localhost:8000/api/projects",
-    onSuccess: fetchProjects,
+    onSuccess: async () => {
+      try { await refresh(); } catch (e) { /* ignore */ }
+    },
   });
-
-  function fetchProjects() {
-    fetch("http://localhost:8000/api/projects/")
-      .then((res) => res.json())
-      .then((data) => {
-        setProjects(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching projects:", err);
-        setLoading(false);
-      });
-  }
-
-  useEffect(() => {
-    fetchProjects();
-  }, []);
 
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this project?")) {
@@ -58,10 +44,16 @@ export default function Projects() {
             <h1 className="text-3xl font-bold text-foreground">Projects</h1>
             <p className="text-muted-foreground">Manage your organization's projects</p>
           </div>
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Project
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => refresh()} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Project
+            </Button>
+          </div>
         </div>
 
         {projects.length === 0 ? (
@@ -146,13 +138,13 @@ export default function Projects() {
       <CreateProjectModal
         isOpen={isCreateModalOpen}
         onOpenChange={setIsCreateModalOpen}
-        onSuccess={fetchProjects}
+        onSuccess={refresh}
       />
       <EditProjectModal
         isOpen={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
         project={selectedProject}
-        onSuccess={fetchProjects}
+        onSuccess={refresh}
       />
     </DashboardLayout>
   );
