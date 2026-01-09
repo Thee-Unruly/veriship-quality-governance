@@ -4,7 +4,7 @@ import { MetricCard } from "@/components/dashboard/MetricCard";
 import { RiskGauge } from "@/components/dashboard/RiskGauge";
 import { ProjectCard } from "@/components/dashboard/ProjectCard";
 import { ReleaseApprovalCard } from "@/components/dashboard/ReleaseApprovalCard";
-import { QualityTrendChart } from "@/components/dashboard/QualityTrendChart";
+// QualityTrendChart removed from dashboard for now
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { AIInsightsPanel } from "@/components/dashboard/AIInsightsPanel";
 import {
@@ -138,8 +138,9 @@ export default function Index() {
   useEffect(() => {
     fetchData();
 
-    // Auto-refresh every 30 seconds for live feel
-    const interval = setInterval(fetchData, 30000);
+    // Auto-refresh once per day to avoid unnecessary LLM token usage
+    const DAILY_MS = 24 * 60 * 60 * 1000;
+    const interval = setInterval(fetchData, DAILY_MS);
     return () => clearInterval(interval);
   }, []);
 
@@ -242,8 +243,7 @@ export default function Index() {
               </div>
             </div>
 
-            {/* Quality Trends Chart */}
-            <QualityTrendChart />
+            {/* Quality Trends Chart removed temporarily */}
 
             {/* Projects Grid */}
             <div>

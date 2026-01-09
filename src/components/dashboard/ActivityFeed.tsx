@@ -101,7 +101,8 @@ export function ActivityFeed({ activities = [] }: ActivityFeedProps) {
     };
 
     fetchActivity();
-    const poll = setInterval(fetchActivity, 30000);
+    const DAILY_MS = 24 * 60 * 60 * 1000;
+    const poll = setInterval(fetchActivity, DAILY_MS);
     return () => {
       mounted = false;
       clearInterval(poll);
