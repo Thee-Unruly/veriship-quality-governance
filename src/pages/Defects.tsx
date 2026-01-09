@@ -18,6 +18,7 @@ export default function Defects() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedDefect, setSelectedDefect] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState<string | "">("");
 
   const { delete: deleteDefect } = useCrud({
     baseUrl: "http://localhost:8000/api/defects",
@@ -48,14 +49,31 @@ export default function Defects() {
   }, [selectedProject]);
 
   useEffect(() => {
-    setFilteredDefects(defects);
-  }, [defects]);
+    const applyStatusFilter = (items: any[]) => {
+      if (!statusFilter) return items;
+      if (statusFilter === "open") return items.filter((d) => (d.status || "").toLowerCase() === "open");
+      if (statusFilter === "completed") return items.filter((d) => {
+        const s = (d.status || "").toLowerCase();
+        return s === "resolved" || s === "closed";
+      });
+      return items;
+    };
+
+    setFilteredDefects(applyStatusFilter(defects));
+  }, [defects, statusFilter]);
 
   useEffect(() => {
     const handler = (e: any) => {
       const q = (e?.detail || "").toString().toLowerCase().trim();
       if (!q) {
-        setFilteredDefects(defects);
+        // re-apply current status filter when clearing search
+        const items = statusFilter ? defects.filter((d) => {
+          const s = (d.status || "").toLowerCase();
+          if (statusFilter === "open") return s === "open";
+          if (statusFilter === "completed") return s === "resolved" || s === "closed";
+          return true;
+        }) : defects;
+        setFilteredDefects(items);
         return;
       }
       const filtered = defects.filter((d: any) => {
@@ -63,7 +81,14 @@ export default function Defects() {
         const desc = (d.description || "").toString().toLowerCase();
         return title.includes(q) || desc.includes(q);
       });
-      setFilteredDefects(filtered);
+      // respect status filter when searching
+      const items = statusFilter ? filtered.filter((d) => {
+        const s = (d.status || "").toLowerCase();
+        if (statusFilter === "open") return s === "open";
+        if (statusFilter === "completed") return s === "resolved" || s === "closed";
+        return true;
+      }) : filtered;
+      setFilteredDefects(items);
     };
     window.addEventListener("globalSearch", handler as EventListener);
     return () => window.removeEventListener("globalSearch", handler as EventListener);
@@ -147,6 +172,30 @@ export default function Defects() {
               ))
             )}
           </select>
+        </div>
+
+        <div className="mb-4 flex items-center gap-3">
+          <label className="text-sm font-medium">Status:</label>
+          <div className="flex gap-2">
+            <button
+              className={`px-3 py-1 rounded ${statusFilter === "" ? "bg-primary text-white" : "border"}`}
+              onClick={() => setStatusFilter("")}
+            >
+              All
+            </button>
+            <button
+              className={`px-3 py-1 rounded ${statusFilter === "open" ? "bg-primary text-white" : "border"}`}
+              onClick={() => setStatusFilter("open")}
+            >
+              Open
+            </button>
+            <button
+              className={`px-3 py-1 rounded ${statusFilter === "completed" ? "bg-primary text-white" : "border"}`}
+              onClick={() => setStatusFilter("completed")}
+            >
+              Completed
+            </button>
+          </div>
         </div>
 
         {filteredDefects.length === 0 ? (
