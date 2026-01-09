@@ -35,14 +35,14 @@ class DefectResponse(BaseModel):
     id: int
     project_id: int
     defect_id: str
+    description: Optional[str] = None
     title: str
     severity: DefectSeverity
     status: DefectStatus
     release_risk_score: float
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 @router.get("/{project_id}", response_model=List[DefectResponse])
