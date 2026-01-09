@@ -14,7 +14,7 @@ router = APIRouter()
 class RequirementCreate(BaseModel):
     """Requirement creation schema."""
     project_id: int
-    requirement_id: str
+    requirement_id: Optional[str] = None
     title: str
     description: str
     acceptance_criteria: Optional[List[str]] = []
@@ -58,9 +58,24 @@ def list_requirements(project_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=RequirementResponse)
 def create_requirement(req: RequirementCreate, db: Session = Depends(get_db)):
     """Create a new requirement."""
+    # Auto-generate requirement_id if not provided
+    requirement_id = req.requirement_id
+    if not requirement_id:
+        # Find the highest numbered requirement for this project
+        existing_reqs = db.query(Requirement).filter(Requirement.project_id == req.project_id).all()
+        max_num = 0
+        for r in existing_reqs:
+            if r.requirement_id.startswith("REQ-"):
+                try:
+                    num = int(r.requirement_id.split("-")[1])
+                    max_num = max(max_num, num)
+                except (ValueError, IndexError):
+                    pass
+        requirement_id = f"REQ-{max_num + 1:03d}"
+    
     db_req = Requirement(
         project_id=req.project_id,
-        requirement_id=req.requirement_id,
+        requirement_id=requirement_id,
         title=req.title,
         description=req.description,
         acceptance_criteria=req.acceptance_criteria or [],

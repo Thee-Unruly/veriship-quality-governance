@@ -16,7 +16,7 @@ class TestCaseCreate(BaseModel):
     """Test case creation schema."""
     project_id: int
     requirement_id: Optional[int] = None
-    test_case_id: str
+    test_case_id: Optional[str] = None
     title: str
     description: Optional[str] = None
     test_type: str = "manual"
@@ -101,10 +101,25 @@ def list_test_cases(project_id: int, status: Optional[str] = None, db: Session =
 @router.post("/", response_model=TestCaseResponse)
 def create_test_case(tc: TestCaseCreate, db: Session = Depends(get_db)):
     """Create a new test case."""
+    # Auto-generate test_case_id if not provided
+    test_case_id = tc.test_case_id
+    if not test_case_id:
+        # Find the highest numbered test case for this project
+        existing_tcs = db.query(TestCase).filter(TestCase.project_id == tc.project_id).all()
+        max_num = 0
+        for t in existing_tcs:
+            if t.test_case_id.startswith("TC-"):
+                try:
+                    num = int(t.test_case_id.split("-")[1])
+                    max_num = max(max_num, num)
+                except (ValueError, IndexError):
+                    pass
+        test_case_id = f"TC-{max_num + 1:03d}"
+    
     db_tc = TestCase(
         project_id=tc.project_id,
         requirement_id=tc.requirement_id,
-        test_case_id=tc.test_case_id,
+        test_case_id=test_case_id,
         title=tc.title,
         description=tc.description,
         test_type=tc.test_type,

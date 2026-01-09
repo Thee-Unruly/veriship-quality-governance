@@ -14,7 +14,7 @@ router = APIRouter()
 class ReleaseCreate(BaseModel):
     """Release creation schema."""
     project_id: int
-    release_id: str
+    release_id: Optional[str] = None
     version: str
     planned_release_date: Optional[datetime] = None
 
@@ -59,9 +59,24 @@ def list_all_releases(db: Session = Depends(get_db)):
 @router.post("/", response_model=ReleaseResponse)
 def create_release(release: ReleaseCreate, db: Session = Depends(get_db)):
     """Create a new release."""
+    # Auto-generate release_id if not provided
+    release_id = release.release_id
+    if not release_id:
+        # Find the highest numbered release for this project
+        existing_rels = db.query(Release).filter(Release.project_id == release.project_id).all()
+        max_num = 0
+        for r in existing_rels:
+            if r.release_id.startswith("REL-"):
+                try:
+                    num = int(r.release_id.split("-")[1])
+                    max_num = max(max_num, num)
+                except (ValueError, IndexError):
+                    pass
+        release_id = f"REL-{max_num + 1:03d}"
+    
     db_release = Release(
         project_id=release.project_id,
-        release_id=release.release_id,
+        release_id=release_id,
         version=release.version,
         planned_release_date=release.planned_release_date,
     )

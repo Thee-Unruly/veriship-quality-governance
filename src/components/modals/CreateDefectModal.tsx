@@ -25,7 +25,6 @@ export function CreateDefectModal({
     projectId,
     onSuccess,
 }: CreateDefectModalProps) {
-    const [defectId, setDefectId] = useState("");
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [severity, setSeverity] = useState<string>("MEDIUM");
@@ -34,7 +33,6 @@ export function CreateDefectModal({
     const { create, loading } = useCrud({
         baseUrl: "http://localhost:8000/api/defects",
         onSuccess: () => {
-            setDefectId("");
             setTitle("");
             setDescription("");
             setSeverity("MEDIUM");
@@ -45,11 +43,10 @@ export function CreateDefectModal({
     });
 
     const handleSubmit = async () => {
-        if (!defectId.trim() || !title.trim()) return;
+        if (!title.trim()) return;
 
         await create({
             project_id: projectId,
-            defect_id: defectId,
             title,
             description,
             severity: severity as any,
@@ -67,16 +64,6 @@ export function CreateDefectModal({
             isLoading={loading}
         >
             <div className="space-y-4">
-                <div>
-                    <Label htmlFor="defect-id">Defect ID *</Label>
-                    <Input
-                        id="defect-id"
-                        placeholder="e.g., DEF-001"
-                        value={defectId}
-                        onChange={(e) => setDefectId(e.target.value)}
-                        disabled={loading}
-                    />
-                </div>
                 <div>
                     <Label htmlFor="title">Title *</Label>
                     <Input

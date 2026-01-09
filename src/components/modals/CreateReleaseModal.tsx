@@ -17,14 +17,12 @@ export function CreateReleaseModal({
     projectId,
     onSuccess,
 }: CreateReleaseModalProps) {
-    const [releaseId, setReleaseId] = useState("");
     const [version, setVersion] = useState("");
     const [releaseDate, setReleaseDate] = useState("");
 
     const { create, loading } = useCrud({
         baseUrl: "http://localhost:8000/api/releases",
         onSuccess: () => {
-            setReleaseId("");
             setVersion("");
             setReleaseDate("");
             onOpenChange(false);
@@ -33,11 +31,10 @@ export function CreateReleaseModal({
     });
 
     const handleSubmit = async () => {
-        if (!releaseId.trim() || !version.trim()) return;
+        if (!version.trim()) return;
 
         const data: any = {
             project_id: projectId,
-            release_id: releaseId,
             version,
         };
 
@@ -58,16 +55,6 @@ export function CreateReleaseModal({
             isLoading={loading}
         >
             <div className="space-y-4">
-                <div>
-                    <Label htmlFor="release-id">Release ID *</Label>
-                    <Input
-                        id="release-id"
-                        placeholder="e.g., REL-001"
-                        value={releaseId}
-                        onChange={(e) => setReleaseId(e.target.value)}
-                        disabled={loading}
-                    />
-                </div>
                 <div>
                     <Label htmlFor="version">Version *</Label>
                     <Input

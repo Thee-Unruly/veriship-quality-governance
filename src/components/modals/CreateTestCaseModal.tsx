@@ -25,7 +25,6 @@ export function CreateTestCaseModal({
     projectId,
     onSuccess,
 }: CreateTestCaseModalProps) {
-    const [testId, setTestId] = useState("");
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [testType, setTestType] = useState("manual");
@@ -34,7 +33,6 @@ export function CreateTestCaseModal({
     const { create, loading } = useCrud({
         baseUrl: "http://localhost:8000/api/test-cases",
         onSuccess: () => {
-            setTestId("");
             setTitle("");
             setDescription("");
             setTestType("manual");
@@ -45,11 +43,10 @@ export function CreateTestCaseModal({
     });
 
     const handleSubmit = async () => {
-        if (!testId.trim() || !title.trim()) return;
+        if (!title.trim()) return;
 
         await create({
             project_id: projectId,
-            test_case_id: testId,
             title,
             description,
             test_type: testType,
@@ -67,16 +64,6 @@ export function CreateTestCaseModal({
             isLoading={loading}
         >
             <div className="space-y-4">
-                <div>
-                    <Label htmlFor="test-id">Test Case ID *</Label>
-                    <Input
-                        id="test-id"
-                        placeholder="e.g., TC-001"
-                        value={testId}
-                        onChange={(e) => setTestId(e.target.value)}
-                        disabled={loading}
-                    />
-                </div>
                 <div>
                     <Label htmlFor="title">Title *</Label>
                     <Input

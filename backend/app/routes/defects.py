@@ -14,7 +14,7 @@ router = APIRouter()
 class DefectCreate(BaseModel):
     """Defect creation schema."""
     project_id: int
-    defect_id: str
+    defect_id: Optional[str] = None
     title: str
     description: Optional[str] = None
     severity: DefectSeverity = DefectSeverity.MEDIUM
@@ -55,9 +55,24 @@ def list_defects(project_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=DefectResponse)
 def create_defect(defect: DefectCreate, db: Session = Depends(get_db)):
     """Create a new defect."""
+    # Auto-generate defect_id if not provided
+    defect_id = defect.defect_id
+    if not defect_id:
+        # Find the highest numbered defect for this project
+        existing_defs = db.query(Defect).filter(Defect.project_id == defect.project_id).all()
+        max_num = 0
+        for d in existing_defs:
+            if d.defect_id.startswith("DEF-"):
+                try:
+                    num = int(d.defect_id.split("-")[1])
+                    max_num = max(max_num, num)
+                except (ValueError, IndexError):
+                    pass
+        defect_id = f"DEF-{max_num + 1:03d}"
+    
     db_defect = Defect(
         project_id=defect.project_id,
-        defect_id=defect.defect_id,
+        defect_id=defect_id,
         title=defect.title,
         description=defect.description,
         severity=defect.severity,

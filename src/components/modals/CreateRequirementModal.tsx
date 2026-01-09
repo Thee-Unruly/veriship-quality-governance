@@ -18,7 +18,6 @@ export function CreateRequirementModal({
     projectId,
     onSuccess,
 }: CreateRequirementModalProps) {
-    const [reqId, setReqId] = useState("");
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
     const [priority, setPriority] = useState("1");
@@ -26,7 +25,6 @@ export function CreateRequirementModal({
     const { create, loading } = useCrud({
         baseUrl: "http://localhost:8000/api/requirements",
         onSuccess: () => {
-            setReqId("");
             setTitle("");
             setDescription("");
             setPriority("1");
@@ -36,11 +34,10 @@ export function CreateRequirementModal({
     });
 
     const handleSubmit = async () => {
-        if (!reqId.trim() || !title.trim()) return;
+        if (!title.trim()) return;
 
         await create({
             project_id: projectId,
-            requirement_id: reqId,
             title,
             description,
             priority: parseInt(priority),
@@ -58,16 +55,6 @@ export function CreateRequirementModal({
             isLoading={loading}
         >
             <div className="space-y-4">
-                <div>
-                    <Label htmlFor="req-id">Requirement ID *</Label>
-                    <Input
-                        id="req-id"
-                        placeholder="e.g., REQ-001"
-                        value={reqId}
-                        onChange={(e) => setReqId(e.target.value)}
-                        disabled={loading}
-                    />
-                </div>
                 <div>
                     <Label htmlFor="title">Title *</Label>
                     <Input
