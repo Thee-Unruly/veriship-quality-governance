@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   CheckCircle2,
@@ -36,53 +37,8 @@ function getRelativeTime(date: Date): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-const activities: Activity[] = [
-  {
-    id: "1",
-    type: "approval",
-    user: { name: "Sarah Chen" },
-    action: "approved release",
-    target: "v2.4.0",
-    project: "Project Alpha",
-    timestamp: "5 min ago",
-  },
-  {
-    id: "2",
-    type: "ai",
-    user: { name: "Quality Copilot" },
-    action: "analyzed",
-    target: "15 requirements",
-    project: "Project Beta",
-    timestamp: "12 min ago",
-  },
-  {
-    id: "3",
-    type: "defect",
-    user: { name: "Mike Johnson" },
-    action: "reported critical defect",
-    target: "DEF-1234",
-    project: "Project Alpha",
-    timestamp: "25 min ago",
-  },
-  {
-    id: "4",
-    type: "requirement",
-    user: { name: "Lisa Park" },
-    action: "updated requirement",
-    target: "REQ-567",
-    project: "Project Gamma",
-    timestamp: "1 hour ago",
-  },
-  {
-    id: "5",
-    type: "alert",
-    user: { name: "System" },
-    action: "flagged risk threshold exceeded in",
-    target: "Release v1.8.0",
-    project: "Project Beta",
-    timestamp: "2 hours ago",
-  },
-];
+// Note: ActivityFeed supports live relative-time updates via an internal tick
+// state that forces a re-render periodically so "x min ago" labels update.
 
 const getTypeConfig = (type: string) => {
   switch (type) {
@@ -109,55 +65,48 @@ const getTypeConfig = (type: string) => {
 };
 
 export function ActivityFeed({ activities = [] }: ActivityFeedProps) {
-  const defaultActivities: Activity[] = [
-    {
-      id: "1",
-      type: "approval",
-      user: { name: "Sarah Chen" },
-      action: "approved release",
-      target: "v2.4.0",
-      project: "Project Alpha",
-      timestamp: "5 min ago",
-    },
-    {
-      id: "2",
-      type: "ai",
-      user: { name: "Quality Copilot" },
-      action: "analyzed",
-      target: "15 requirements",
-      project: "Project Beta",
-      timestamp: "12 min ago",
-    },
-    {
-      id: "3",
-      type: "defect",
-      user: { name: "Mike Johnson" },
-      action: "reported critical defect",
-      target: "DEF-1234",
-      project: "Project Alpha",
-      timestamp: "25 min ago",
-    },
-    {
-      id: "4",
-      type: "requirement",
-      user: { name: "Lisa Park" },
-      action: "updated requirement",
-      target: "REQ-567",
-      project: "Project Gamma",
-      timestamp: "1 hour ago",
-    },
-    {
-      id: "5",
-      type: "alert",
-      user: { name: "System" },
-      action: "flagged risk threshold exceeded in",
-      target: "Release v1.8.0",
-      project: "Project Beta",
-      timestamp: "2 hours ago",
-    },
-  ];
+  const [localActivities, setLocalActivities] = useState<Activity[] | null>(null);
+  const displayActivities = activities.length > 0 ? activities : (localActivities || []);
 
-  const displayActivities = activities.length > 0 ? activities : defaultActivities;
+  // internal tick forces periodic re-render so relative timestamps update
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick((t) => t + 1), 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // If parent didn't pass activities, fetch from backend activity endpoint
+  useEffect(() => {
+    let mounted = true;
+    if (activities && activities.length > 0) return;
+
+    const fetchActivity = async () => {
+      try {
+        const res = await fetch("http://localhost:8000/api/metrics/activity?limit=6");
+        if (!res.ok) return;
+        const data = await res.json();
+        const transformed = data.map((act: any) => ({
+          id: act.id,
+          type: act.activity_type,
+          user: { name: act.user_name || "System" },
+          action: (act.description || "").split(":")[0].toLowerCase(),
+          target: (act.description || "").split(":")[1]?.trim() || "",
+          project: act.project_name || "",
+          timestamp: new Date(act.timestamp),
+        } as Activity));
+        if (mounted) setLocalActivities(transformed.slice(0, 6));
+      } catch (err) {
+        console.error("Error fetching activity feed:", err);
+      }
+    };
+
+    fetchActivity();
+    const poll = setInterval(fetchActivity, 30000);
+    return () => {
+      mounted = false;
+      clearInterval(poll);
+    };
+  }, [activities]);
   return (
     <div className="metric-card">
       <div className="mb-4 flex items-center justify-between">

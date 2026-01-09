@@ -27,7 +27,7 @@ export function CreateDefectModal({
 }: CreateDefectModalProps) {
     const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
-    const [severity, setSeverity] = useState<string>("MEDIUM");
+    const [severity, setSeverity] = useState<string>("medium");
     const [foundBy, setFoundBy] = useState("");
 
     const { create, loading } = useCrud({
@@ -35,7 +35,7 @@ export function CreateDefectModal({
         onSuccess: () => {
             setTitle("");
             setDescription("");
-            setSeverity("MEDIUM");
+            setSeverity("medium");
             setFoundBy("");
             onOpenChange(false);
             onSuccess();
@@ -92,10 +92,10 @@ export function CreateDefectModal({
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="CRITICAL">Critical</SelectItem>
-                            <SelectItem value="HIGH">High</SelectItem>
-                            <SelectItem value="MEDIUM">Medium</SelectItem>
-                            <SelectItem value="LOW">Low</SelectItem>
+                            <SelectItem value="critical">Critical</SelectItem>
+                            <SelectItem value="high">High</SelectItem>
+                            <SelectItem value="medium">Medium</SelectItem>
+                            <SelectItem value="low">Low</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
