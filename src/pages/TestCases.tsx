@@ -63,9 +63,10 @@ export default function TestCases() {
 
   useEffect(() => {
     fetchTestCases();
-    useEffect(() => {
-      fetchRequirements();
-    }, [selectedProject]);
+  }, [selectedProject]);
+
+  useEffect(() => {
+    fetchRequirements();
   }, [selectedProject]);
 
   useEffect(() => {
