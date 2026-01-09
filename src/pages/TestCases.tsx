@@ -13,6 +13,7 @@ export default function TestCases() {
   const [testCases, setTestCases] = useState([]);
   const [filteredTestCases, setFilteredTestCases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [requirementsMap, setRequirementsMap] = useState<Record<number, string>>({});
   const [currentTab, setCurrentTab] = useState<"ongoing" | "completed">("ongoing");
   const { projects, loading: projectsLoading, refresh } = useProjects();
   const [selectedProject, setSelectedProject] = useState<number | "">("");
@@ -39,6 +40,22 @@ export default function TestCases() {
     }
   }
 
+  async function fetchRequirements() {
+    if (!selectedProject) {
+      setRequirementsMap({});
+      return;
+    }
+    try {
+      const res = await fetch(`http://localhost:8000/api/requirements/${selectedProject}`);
+      const data = await res.json();
+      const map: Record<number, string> = {};
+      (data || []).forEach((r: any) => { map[r.id] = r.title; });
+      setRequirementsMap(map);
+    } catch (err) {
+      console.error("Error fetching requirements for test cases grouping:", err);
+    }
+  }
+
   const { delete: deleteTestCase } = useCrud({
     baseUrl: "http://localhost:8000/api/test-cases",
     onSuccess: fetchTestCases,
@@ -46,6 +63,9 @@ export default function TestCases() {
 
   useEffect(() => {
     fetchTestCases();
+    useEffect(() => {
+      fetchRequirements();
+    }, [selectedProject]);
   }, [selectedProject]);
 
   useEffect(() => {
@@ -122,6 +142,20 @@ export default function TestCases() {
 
   if (loading) return <div className="p-6">Loading test cases...</div>;
 
+  // Group test cases by requirement_id
+  const grouped = (filteredTestCases || []).reduce((acc: any, tc: any) => {
+    const rid = tc.requirement_id || 0;
+    if (!acc[rid]) acc[rid] = [];
+    acc[rid].push(tc);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  const groups = Object.keys(grouped).map((k) => ({
+    requirementId: Number(k),
+    title: Number(k) === 0 ? "(No Requirement)" : (requirementsMap[Number(k)] || `Requirement ${k}`),
+    testCases: grouped[k],
+  }));
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -181,68 +215,75 @@ export default function TestCases() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
-            {filteredTestCases.map((tc: any) => (
-              <Card key={tc.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <CheckSquare className="h-5 w-5" />
-                        {tc.title}
-                      </CardTitle>
-                      <p className="mt-2 text-sm text-muted-foreground">{tc.description}</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Badge variant={tc.is_automated ? "default" : "secondary"}>
-                        {tc.is_automated ? "Automated" : "Manual"}
-                      </Badge>
-                      <Badge variant={tc.status === "completed" ? "outline" : "default"}>
-                        {tc.status}
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(tc)}
-                      >
-                        <Edit2 className="h-4 w-4 text-blue-500" />
-                      </Button>
-                      {tc.status !== "completed" && (
-                        <Button variant="ghost" size="sm" onClick={() => handleMarkComplete(tc.id)}>
-                          Mark Complete
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(tc.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">ID</p>
-                      <p className="font-semibold">{tc.test_case_id}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Type</p>
-                      <p className="font-semibold capitalize">{tc.test_type}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Coverage</p>
-                      <p className="font-semibold">{tc.coverage_status?.toFixed(1) || 0}%</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Priority</p>
-                      <p className="font-semibold">P{tc.priority}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+          <div className="space-y-6">
+            {groups.map((g) => (
+              <section key={String(g.requirementId)}>
+                <h3 className="text-lg font-semibold">{g.title} <span className="text-sm text-muted-foreground">({g.testCases.length})</span></h3>
+                <div className="grid gap-4 mt-3">
+                  {g.testCases.map((tc: any) => (
+                    <Card key={tc.id}>
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <CardTitle className="flex items-center gap-2">
+                              <CheckSquare className="h-5 w-5" />
+                              {tc.title}
+                            </CardTitle>
+                            <p className="mt-2 text-sm text-muted-foreground">{tc.description}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Badge variant={tc.is_automated ? "default" : "secondary"}>
+                              {tc.is_automated ? "Automated" : "Manual"}
+                            </Badge>
+                            <Badge variant={tc.status === "completed" ? "outline" : "default"}>
+                              {tc.status}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(tc)}
+                            >
+                              <Edit2 className="h-4 w-4 text-blue-500" />
+                            </Button>
+                            {tc.status !== "completed" && (
+                              <Button variant="ghost" size="sm" onClick={() => handleMarkComplete(tc.id)}>
+                                Mark Complete
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(tc.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">ID</p>
+                            <p className="font-semibold">{tc.test_case_id}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Type</p>
+                            <p className="font-semibold capitalize">{tc.test_type}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Coverage</p>
+                            <p className="font-semibold">{tc.coverage_status?.toFixed(1) || 0}%</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Priority</p>
+                            <p className="font-semibold">P{tc.priority}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}

@@ -38,6 +38,7 @@ class TestCaseResponse(BaseModel):
     """Test case response schema."""
     id: int
     project_id: int
+    requirement_id: Optional[int] = None
     test_case_id: str
     title: str
     description: Optional[str]
