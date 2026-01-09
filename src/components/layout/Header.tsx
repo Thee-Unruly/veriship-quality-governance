@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 interface UserInfo {
@@ -46,6 +46,31 @@ export function Header() {
     navigate("/login");
   };
 
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const searchTimeout = useRef<number | null>(null);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    if (searchTimeout.current) {
+      window.clearTimeout(searchTimeout.current);
+    }
+    // debounce dispatch
+    searchTimeout.current = window.setTimeout(() => {
+      try {
+        window.dispatchEvent(new CustomEvent("globalSearch", { detail: value }));
+      } catch (err) {
+        // ignore in environments that restrict CustomEvent
+      }
+    }, 300) as unknown as number;
+  };
+
+  useEffect(() => {
+    return () => {
+      if (searchTimeout.current) window.clearTimeout(searchTimeout.current);
+    };
+  }, []);
+
   const handleProfileClick = () => {
     navigate("/profile");
   };
@@ -70,6 +95,8 @@ export function Header() {
         <Input
           type="search"
           placeholder="Search projects, requirements, tests..."
+          value={searchQuery}
+          onChange={handleSearchChange}
           className="pl-10 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-accent"
         />
       </div>

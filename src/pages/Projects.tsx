@@ -12,6 +12,7 @@ import { useCrud } from "@/hooks/use-crud";
 
 export default function Projects() {
   const { projects, loading: loading, refresh } = useProjects();
+  const [filteredProjects, setFilteredProjects] = useState<any[]>(projects);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -33,6 +34,28 @@ export default function Projects() {
     setSelectedProject(project);
     setIsEditModalOpen(true);
   };
+
+  useEffect(() => {
+    setFilteredProjects(projects);
+  }, [projects]);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const q = (e?.detail || "").toString().toLowerCase().trim();
+      if (!q) {
+        setFilteredProjects(projects);
+        return;
+      }
+      const filtered = projects.filter((p: any) => {
+        const name = (p.name || "").toString().toLowerCase();
+        const desc = (p.description || "").toString().toLowerCase();
+        return name.includes(q) || desc.includes(q);
+      });
+      setFilteredProjects(filtered);
+    };
+    window.addEventListener("globalSearch", handler as EventListener);
+    return () => window.removeEventListener("globalSearch", handler as EventListener);
+  }, [projects]);
 
   if (loading) return <div className="p-6">Loading projects...</div>;
 
@@ -56,7 +79,7 @@ export default function Projects() {
           </div>
         </div>
 
-        {projects.length === 0 ? (
+        {filteredProjects.length === 0 ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -70,7 +93,7 @@ export default function Projects() {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {projects.map((project: any) => (
+            {filteredProjects.map((project: any) => (
               <Card key={project.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
