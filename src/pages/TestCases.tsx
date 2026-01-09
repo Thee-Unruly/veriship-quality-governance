@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckSquare, Plus, Trash2, Edit2 } from "lucide-react";
+import { CheckSquare, Plus, Trash2, Edit2, Info } from "lucide-react";
 import { CreateTestCaseModal } from "@/components/modals/CreateTestCaseModal";
 import { EditTestCaseModal } from "@/components/modals/EditTestCaseModal";
 import { useCrud } from "@/hooks/use-crud";
@@ -226,7 +226,10 @@ export default function TestCases() {
                       <div className="flex items-center gap-3">
                         <div>
                           <div className="text-lg font-semibold text-foreground">{g.title}</div>
-                          <div className="text-sm text-muted-foreground">{Number(g.requirementId) === 0 ? "No associated requirement" : "Requirement details"}</div>
+                          <div className="text-sm text-muted-foreground flex items-center gap-1">
+                            <Info className="h-3 w-3" />
+                            Click to view test cases
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
