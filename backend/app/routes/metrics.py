@@ -18,6 +18,7 @@ from app.models import (
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+from app.models import QualityMetric
 
 router = APIRouter()
 
@@ -225,3 +226,48 @@ def get_activity_feed(limit: int = 10, db: Session = Depends(get_db)):
     
     # Sort by timestamp descending and return top N
     return sorted(activities, key=lambda x: x.timestamp, reverse=True)[:limit]
+
+
+class TrendPoint(BaseModel):
+    date: str
+    coverage: float
+    defects: int
+    risk: float
+
+
+@router.get("/trends", response_model=List[TrendPoint])
+def get_trends(project_id: Optional[int] = None, months: int = 6, db: Session = Depends(get_db)):
+    """Return recent quality trend points (coverage, defects, risk) per month.
+
+    If `project_id` is provided, trends are for that project; otherwise aggregated across projects.
+    """
+    # Fetch metrics; we'll bucket by year-month
+    query = db.query(QualityMetric)
+    if project_id:
+        query = query.filter(QualityMetric.project_id == project_id)
+
+    metrics = query.order_by(QualityMetric.metric_date.desc()).all()
+
+    # Bucket by YYYY-MM -> take the latest metric in that month
+    buckets = {}
+    for m in metrics:
+        key = m.metric_date.strftime("%Y-%m") if m.metric_date else None
+        if not key:
+            continue
+        if key not in buckets:
+            buckets[key] = m
+
+    # Sort months ascending and take the last `months` entries
+    keys = sorted(buckets.keys())[-months:]
+    result = []
+    for k in keys:
+        m = buckets[k]
+        label = m.metric_date.strftime("%b %Y") if m.metric_date else k
+        result.append(TrendPoint(
+            date=label,
+            coverage=round(getattr(m, 'test_coverage_percent', getattr(m, 'coverage_percent', 0.0)) or 0.0, 1),
+            defects=int(getattr(m, 'defects_open', 0) or 0),
+            risk=round(getattr(m, 'overall_risk_score', getattr(m, 'risk_score', 0.0)) or 0.0, 1),
+        ))
+
+    return result

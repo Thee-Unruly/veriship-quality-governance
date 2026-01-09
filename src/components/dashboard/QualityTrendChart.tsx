@@ -7,24 +7,79 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
+import { useEffect, useState } from "react";
 
-const data = [
-  { date: "Jan", coverage: 72, defects: 45, risk: 55 },
-  { date: "Feb", coverage: 75, defects: 38, risk: 48 },
-  { date: "Mar", coverage: 78, defects: 42, risk: 52 },
-  { date: "Apr", coverage: 82, defects: 35, risk: 42 },
-  { date: "May", coverage: 85, defects: 28, risk: 35 },
-  { date: "Jun", coverage: 88, defects: 22, risk: 28 },
-];
+interface TrendPoint {
+  date: string;
+  coverage: number;
+  defects: number;
+  risk: number;
+}
 
 export function QualityTrendChart() {
+  const [data, setData] = useState<TrendPoint[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [selectedProject, setSelectedProject] = useState<number | "">("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchProjects = async () => {
+      try {
+        const res = await fetch("/api/projects/");
+        if (!res.ok) throw new Error("Failed to load projects");
+        const json = await res.json();
+        if (mounted) setProjects(json || []);
+        if (mounted && json && json.length > 0 && selectedProject === "") {
+          setSelectedProject(json[0].id);
+        }
+      } catch (e) {
+        if (mounted) setProjects([]);
+      }
+    };
+    fetchProjects();
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchTrends = async () => {
+      setLoading(true);
+      try {
+        const url = selectedProject ? `/api/metrics/trends?project_id=${selectedProject}` : "/api/metrics/trends";
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Failed to load trends");
+        const json = await res.json();
+        if (mounted) setData(json || []);
+      } catch (e) {
+        if (mounted) setData([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    fetchTrends();
+    return () => { mounted = false; };
+  }, [selectedProject]);
+
   return (
     <div className="metric-card">
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold text-foreground">Quality Trends</h3>
-        <p className="text-sm text-muted-foreground">
-          Coverage, defects, and risk over time
-        </p>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">Quality Trends</h3>
+          <p className="text-sm text-muted-foreground">Coverage, defects, and risk over time</p>
+        </div>
+        <div>
+          <select
+            value={selectedProject}
+            onChange={(e) => setSelectedProject(e.target.value ? Number(e.target.value) : "")}
+            className="rounded border border-input bg-background px-2 py-1 text-sm"
+          >
+            <option value="">All Projects</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
@@ -98,8 +153,8 @@ export function QualityTrendChart() {
       </div>
       {/* Legend */}
       <div className="mt-4 flex justify-center gap-6">
-        <div className="flex items-center gap-2">
-          <div className="h-3 w-3 rounded-full bg-accent" />
+        {/* Legend */}
+        <div className="mt-4 flex justify-center gap-6">
           <span className="text-sm text-muted-foreground">Coverage</span>
         </div>
         <div className="flex items-center gap-2">

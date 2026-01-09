@@ -454,6 +454,16 @@ class QAInsight(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class CopilotPrompt(Base):
+    """Stores prompts sent to the LLM for audit and debugging."""
+    __tablename__ = "copilot_prompts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    endpoint = Column(String(100), nullable=False)
+    prompt_text = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # ========== Team & Organization ==========
 
 class TeamMember(Base):
