@@ -28,6 +28,17 @@ export default function Requirements() {
   const [analysisLoading, setAnalysisLoading] = useState<{ [key: number]: boolean }>({});
   const [generatedTests, setGeneratedTests] = useState([]);
 
+  const getPriorityLabel = (priority: number) => {
+    switch (priority) {
+      case 1: return "Critical";
+      case 2: return "High";
+      case 3: return "Medium";
+      case 4: return "Low";
+      case 5: return "Lowest";
+      default: return "Unknown";
+    }
+  };
+
   const { toast } = useToast();
 
   const fetchRequirements = async () => {
@@ -189,7 +200,7 @@ export default function Requirements() {
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Priority</p>
-                    <p className="font-semibold">{req.priority}</p>
+                    <p className="font-semibold">{getPriorityLabel(req.priority)}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Clarity Score</p>

@@ -107,15 +107,18 @@ export function EditTestCaseModal({
                 </div>
                 <div>
                     <Label htmlFor="priority">Priority</Label>
-                    <Input
-                        id="priority"
-                        type="number"
-                        min="1"
-                        max="5"
-                        value={priority}
-                        onChange={(e) => setPriority(e.target.value)}
-                        disabled={loading}
-                    />
+                    <Select value={priority} onValueChange={setPriority} disabled={loading}>
+                        <SelectTrigger id="priority">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="1">Critical</SelectItem>
+                            <SelectItem value="2">High</SelectItem>
+                            <SelectItem value="3">Medium</SelectItem>
+                            <SelectItem value="4">Low</SelectItem>
+                            <SelectItem value="5">Lowest</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
                 <div className="flex items-center gap-2">
                     <input
