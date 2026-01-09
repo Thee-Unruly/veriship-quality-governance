@@ -9,7 +9,6 @@ import { CreateTestCaseModal } from "@/components/modals/CreateTestCaseModal";
 import { EditTestCaseModal } from "@/components/modals/EditTestCaseModal";
 import { useCrud } from "@/hooks/use-crud";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function TestCases() {
   const [testCases, setTestCases] = useState([]);
@@ -272,14 +271,7 @@ export default function TestCases() {
                           <div className="flex items-center gap-2">
                             <div className="flex flex-col items-end text-sm">
                               <span className="text-muted-foreground">Priority</span>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="font-semibold cursor-help">P{tc.priority}</span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Priority {tc.priority}: {getPriorityLabel(tc.priority)}</p>
-                                </TooltipContent>
-                              </Tooltip>
+                              <span className="font-semibold">{getPriorityLabel(tc.priority)}</span>
                             </div>
                             <Badge variant={tc.is_automated ? "default" : "secondary"}>{tc.is_automated ? "Auto" : "Manual"}</Badge>
                             <div className="flex items-center gap-1">
