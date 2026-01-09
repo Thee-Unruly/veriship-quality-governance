@@ -9,6 +9,7 @@ import { CreateTestCaseModal } from "@/components/modals/CreateTestCaseModal";
 import { EditTestCaseModal } from "@/components/modals/EditTestCaseModal";
 import { useCrud } from "@/hooks/use-crud";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function TestCases() {
   const [testCases, setTestCases] = useState([]);
@@ -21,6 +22,17 @@ export default function TestCases() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any>(null);
+
+  const getPriorityLabel = (priority: number) => {
+    switch (priority) {
+      case 1: return "Critical";
+      case 2: return "High";
+      case 3: return "Medium";
+      case 4: return "Low";
+      case 5: return "Lowest";
+      default: return "Unknown";
+    }
+  };
 
   // Define fetch function first so it can be used in useCrud and useEffect
   async function fetchTestCases() {
@@ -227,8 +239,15 @@ export default function TestCases() {
                         <div>
                           <div className="text-lg font-semibold text-foreground">{g.title}</div>
                           <div className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Info className="h-3 w-3" />
-                            Click to view test cases
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Info className="h-3 w-3 cursor-help" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Click to expand and view test cases tied to this requirement</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            Requirement details
                           </div>
                         </div>
                       </div>
@@ -253,7 +272,14 @@ export default function TestCases() {
                           <div className="flex items-center gap-2">
                             <div className="flex flex-col items-end text-sm">
                               <span className="text-muted-foreground">Priority</span>
-                              <span className="font-semibold">P{tc.priority}</span>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="font-semibold cursor-help">P{tc.priority}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Priority {tc.priority}: {getPriorityLabel(tc.priority)}</p>
+                                </TooltipContent>
+                              </Tooltip>
                             </div>
                             <Badge variant={tc.is_automated ? "default" : "secondary"}>{tc.is_automated ? "Auto" : "Manual"}</Badge>
                             <div className="flex items-center gap-1">
