@@ -90,7 +90,7 @@ export function ReleaseApprovalCard({
   const StatusIcon = statusConfig.icon;
 
   return (
-    <div className="metric-card">
+    <div className="metric-card metric-card-compact">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>

@@ -62,7 +62,7 @@ export function QualityTrendChart() {
   }, [selectedProject]);
 
   return (
-    <div className="metric-card">
+    <div className="metric-card metric-card-compact">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-foreground">Quality Trends</h3>
@@ -81,7 +81,7 @@ export function QualityTrendChart() {
           </select>
         </div>
       </div>
-      <div className="h-64">
+      <div className="h-44">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <defs>

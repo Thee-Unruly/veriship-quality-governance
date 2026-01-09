@@ -108,7 +108,7 @@ export function ActivityFeed({ activities = [] }: ActivityFeedProps) {
     };
   }, [activities]);
   return (
-    <div className="metric-card">
+    <div className="metric-card metric-card-compact">
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
@@ -121,7 +121,7 @@ export function ActivityFeed({ activities = [] }: ActivityFeedProps) {
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {displayActivities.map((activity) => {
           const config = getTypeConfig(activity.type);
           const Icon = config.icon;

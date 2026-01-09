@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import Index from "./pages/Index";
 import Projects from "./pages/Projects";
 import Requirements from "./pages/Requirements";
+import AIInsightsPage from "./pages/AIInsights";
 import TestCases from "./pages/TestCases";
 import Defects from "./pages/Defects";
 import Releases from "./pages/Releases";
@@ -61,6 +62,7 @@ const App = () => {
 
             <Route path="/requirements" element={<ProtectedRoute element={<Requirements />} />} />
             <Route path="/help/copilot" element={<ProtectedRoute element={<CopilotGuide />} />} />
+            <Route path="/ai-insights" element={<ProtectedRoute element={<AIInsightsPage />} />} />
             <Route path="/test-cases" element={<ProtectedRoute element={<TestCases />} />} />
             <Route path="/defects" element={<ProtectedRoute element={<Defects />} />} />
             <Route path="/releases" element={<ProtectedRoute element={<Releases />} />} />

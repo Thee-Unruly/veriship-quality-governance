@@ -155,6 +155,10 @@
     @apply relative overflow-hidden rounded-xl bg-card border border-border/50 p-6 transition-all duration-300 hover:shadow-lg hover:border-accent/20;
   }
 
+  .metric-card-compact {
+    @apply p-4;
+  }
+
   .risk-indicator {
     @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
   }

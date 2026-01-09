@@ -55,7 +55,7 @@ export function ProjectCard({
       to={`/projects/${id}`}
       className="group block"
     >
-      <div className="metric-card h-full transition-all duration-300 group-hover:border-accent/40 group-hover:shadow-lg">
+      <div className="metric-card metric-card-compact h-full transition-all duration-300 group-hover:border-accent/40 group-hover:shadow-lg">
         {/* Header */}
         <div className="mb-4 flex items-start justify-between">
           <div>

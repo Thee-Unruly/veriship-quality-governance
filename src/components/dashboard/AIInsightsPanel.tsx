@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-// dialog UI removed — prompts are kept server-side
+import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,11 +20,11 @@ const DEFAULT_BADGE_COUNT = 3;
 export function AIInsightsPanel() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
-  // prompt modal removed; prompts remain in backend for audit
   const { toast } = useToast();
 
   useEffect(() => {
     let mounted = true;
+
     const fetchInsights = async () => {
       setLoading(true);
       try {
@@ -33,7 +33,6 @@ export function AIInsightsPanel() {
         const data = await res.json();
         if (mounted) setInsights(data || []);
       } catch (e) {
-        // fallback to empty list
         if (mounted) setInsights([]);
       } finally {
         if (mounted) setLoading(false);
@@ -46,8 +45,19 @@ export function AIInsightsPanel() {
     };
   }, []);
 
+  const getTypeConfig = (type: string) => {
+    switch (type) {
+      case "warning":
+        return { icon: AlertTriangle, class: "border-l-warning bg-warning/5", iconClass: "text-warning" };
+      case "suggestion":
+        return { icon: Lightbulb, class: "border-l-accent bg-accent/5", iconClass: "text-accent" };
+      default:
+        return { icon: Info, class: "border-l-info bg-info/5", iconClass: "text-info" };
+    }
+  };
+
   return (
-    <div className="metric-card">
+    <div className="metric-card metric-card-compact h-72 flex flex-col">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-accent">
@@ -55,9 +65,10 @@ export function AIInsightsPanel() {
           </div>
           <div>
             <h3 className="text-lg font-semibold text-foreground">AI Insights</h3>
-            <p className="text-xs text-muted-foreground">Recommendations require human approval</p>
+            <p className="text-xs text-muted-foreground">Top recommendations — click View all for full list</p>
           </div>
         </div>
+
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs">
             {loading ? "..." : insights.length || DEFAULT_BADGE_COUNT}
@@ -65,30 +76,27 @@ export function AIInsightsPanel() {
         </div>
       </div>
 
-      <div className="space-y-3 max-h-72 overflow-y-auto">
+      <div className="space-y-3 overflow-y-auto flex-1">
         {loading ? (
           <div className="flex items-center justify-center py-6">
             <Loader className="animate-spin" />
           </div>
         ) : (
-          insights.map((insight) => {
+          insights.slice(0, 3).map((insight) => {
             const config = getTypeConfig(insight.type);
-            const Icon = config.icon;
+            const Icon = config.icon as any;
 
             return (
               <div
                 key={insight.id}
-                className={cn(
-                  "rounded-lg border-l-4 p-4 transition-colors hover:bg-muted/50",
-                  config.class
-                )}
+                className={cn("rounded-lg border-l-4 p-3 transition-colors hover:bg-muted/50", config.class)}
               >
                 <div className="flex items-start gap-3">
                   <Icon className={cn("mt-0.5 h-5 w-5 flex-shrink-0", config.iconClass)} />
-                  <div className="flex-1 space-y-2">
+                  <div className="flex-1 space-y-1">
                     <div>
                       <h4 className="text-sm font-medium text-foreground">{insight.title}</h4>
-                      <p className="mt-1 text-xs text-muted-foreground">{insight.description}</p>
+                      <p className="mt-1 text-xs text-muted-foreground line-clamp-3">{insight.description}</p>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">{insight.project}</span>
@@ -112,7 +120,6 @@ export function AIInsightsPanel() {
                               });
                               if (!res.ok) throw new Error("Failed to apply insight");
                               const json = await res.json();
-                              // remove insight from list
                               setInsights((s) => s.filter((i) => i.id !== insight.id));
                               toast({ title: "Insight applied", description: `Saved as QA insight (#${json.id})` });
                             } catch (e) {
@@ -137,30 +144,12 @@ export function AIInsightsPanel() {
           <Sparkles className="mr-1 inline h-3 w-3" /> AI outputs are recommendations only. All actions require explicit human approval.
         </p>
       </div>
-      {/* prompt modal removed; prompts are retained in backend only */}
+
+      <div className="mt-3 flex justify-end">
+        <Link to="/ai-insights">
+          <Button size="sm" variant="ghost">View all insights</Button>
+        </Link>
+      </div>
     </div>
   );
 }
-
-const getTypeConfig = (type: string) => {
-  switch (type) {
-    case "warning":
-      return {
-        icon: AlertTriangle,
-        class: "border-l-warning bg-warning/5",
-        iconClass: "text-warning",
-      };
-    case "suggestion":
-      return {
-        icon: Lightbulb,
-        class: "border-l-accent bg-accent/5",
-        iconClass: "text-accent",
-      };
-    default:
-      return {
-        icon: Info,
-        class: "border-l-info bg-info/5",
-        iconClass: "text-info",
-      };
-  }
-};
