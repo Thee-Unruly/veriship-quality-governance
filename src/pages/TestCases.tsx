@@ -251,22 +251,15 @@ export default function TestCases() {
                   <AccordionContent>
                     <div className="grid gap-4 mt-3">
                       {g.testCases.map((tc: any) => (
-                        <div key={tc.id} className="flex items-center justify-between gap-4 p-3 border rounded-md bg-card">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3">
+                        <div key={tc.id} className="p-4 border rounded-md bg-card space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3 flex-1">
                               <CheckSquare className="h-5 w-5 text-primary" />
                               <div>
                                 <div className="font-medium text-foreground">{tc.title}</div>
                                 <div className="text-sm text-muted-foreground">{tc.description}</div>
                               </div>
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="flex flex-col items-end text-sm">
-                              <span className="text-muted-foreground">Priority</span>
-                              <span className="font-semibold">{getPriorityLabel(tc.priority)}</span>
-                            </div>
-                            <Badge variant={tc.is_automated ? "default" : "secondary"}>{tc.is_automated ? "Auto" : "Manual"}</Badge>
                             <div className="flex items-center gap-1">
                               <Button variant="ghost" size="sm" onClick={() => handleEdit(tc)}>
                                 <Edit2 className="h-4 w-4 text-blue-500" />
@@ -277,6 +270,15 @@ export default function TestCases() {
                               <Button variant="ghost" size="sm" onClick={() => handleDelete(tc.id)}>
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="text-sm">
+                                <span className="text-muted-foreground">Priority: </span>
+                                <span className="font-semibold">{getPriorityLabel(tc.priority)}</span>
+                              </div>
+                              <Badge variant={tc.is_automated ? "default" : "secondary"}>{tc.is_automated ? "Auto" : "Manual"}</Badge>
                             </div>
                           </div>
                         </div>
