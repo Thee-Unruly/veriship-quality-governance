@@ -30,7 +30,7 @@ An intelligent quality assurance platform for enterprise software teams. VeriShi
 # Install frontend dependencies
 npm install
 
-# Start frontend (port 8080)
+# Start frontend (port 8082)
 npm run dev
 
 # Start backend (in another terminal)
@@ -41,7 +41,7 @@ python run.py
 docker-compose up -d
 ```
 
-Visit `http://localhost:8080` to access the dashboard.
+Visit `http://localhost:8082` to access the dashboard.
 
 ## Project Structure
 

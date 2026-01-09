@@ -18,10 +18,12 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: List[str] = [
         "http://localhost:5173",
-        "http://localhost:8080",
+        "http://localhost:8082",
+        "http://localhost:8081",
         "http://localhost:3000",
         "http://127.0.0.1:5173",
-        "http://127.0.0.1:8080",
+        "http://127.0.0.1:8082",
+        "http://127.0.0.1:8081",
     ]
     
     # AI/LLM
@@ -33,7 +35,7 @@ class Settings(BaseSettings):
     openrouter_testcase_api_key: str = ""
     openrouter_api_url: str = "https://openrouter.ai/api/v1/chat/completions"
     openrouter_model: str = "google/gemma-3-27b-it:free"
-    openrouter_site_url: str = "http://localhost:8080"
+    openrouter_site_url: str = "http://localhost:8082"
     openrouter_site_name: str = "VeriShip QA Platform"
     
     # JWT
