@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Defect, DefectSeverity, DefectStatus
+from app.utils import recalculate_project_status
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
@@ -81,6 +82,11 @@ def create_defect(defect: DefectCreate, db: Session = Depends(get_db)):
     db.add(db_defect)
     db.commit()
     db.refresh(db_defect)
+    # Re-evaluate project status after adding a defect
+    try:
+        recalculate_project_status(db, db_defect.project_id)
+    except Exception:
+        pass
     return db_defect
 
 
@@ -108,6 +114,11 @@ def update_defect(
     
     db.commit()
     db.refresh(defect)
+    # Re-evaluate project status after updating a defect
+    try:
+        recalculate_project_status(db, defect.project_id)
+    except Exception:
+        pass
     return defect
 
 
@@ -120,5 +131,10 @@ def delete_defect(defect_id: int, db: Session = Depends(get_db)):
     
     db.delete(defect)
     db.commit()
+    # Re-evaluate project status after deleting a defect
+    try:
+        recalculate_project_status(db, project_id)
+    except Exception:
+        pass
     return {"status": "deleted"}
 
