@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ export function AIInsightsPanel() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
@@ -102,7 +103,25 @@ export function AIInsightsPanel() {
                       <span className="text-xs text-muted-foreground">{insight.project}</span>
                       <div className="flex items-center gap-2">
                         {insight.action && (
-                          <Button variant="ghost" size="sm" className="h-7 text-xs text-accent hover:text-accent">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-accent hover:text-accent"
+                            onClick={() => {
+                              // handle known actions
+                              if (insight.action === "Generate Tests") {
+                                // navigate to requirements and preselect project by name
+                                navigate(`/requirements?project=${encodeURIComponent(insight.project)}`);
+                                return;
+                              }
+                              if (insight.action === "Review Requirements") {
+                                navigate(`/requirements?project=${encodeURIComponent(insight.project)}`);
+                                return;
+                              }
+                              // fallback: navigate to AI insights page
+                              navigate("/ai-insights");
+                            }}
+                          >
                             {insight.action}
                             <ChevronRight className="ml-1 h-3 w-3" />
                           </Button>

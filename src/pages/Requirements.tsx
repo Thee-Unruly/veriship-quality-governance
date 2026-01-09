@@ -101,6 +101,21 @@ export default function Requirements() {
       setSelectedProject("");
       return;
     }
+    // If URL specifies a project name, prefer that
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const projectName = params.get("project");
+      if (projectName) {
+        const match = projects.find((p: any) => p.name === projectName || p.name === decodeURIComponent(projectName));
+        if (match) {
+          setSelectedProject(match.id);
+          return;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
     if (!projects.find((p: any) => p.id === selectedProject)) {
       setSelectedProject(projects[0].id);
     }
