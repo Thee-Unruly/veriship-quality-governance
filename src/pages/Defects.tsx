@@ -11,6 +11,7 @@ import { useCrud } from "@/hooks/use-crud";
 
 export default function Defects() {
   const [defects, setDefects] = useState([]);
+  const [filteredDefects, setFilteredDefects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { projects, loading: projectsLoading, refresh } = useProjects();
   const [selectedProject, setSelectedProject] = useState<number | "">("");
@@ -45,6 +46,28 @@ export default function Defects() {
   useEffect(() => {
     fetchDefects();
   }, [selectedProject]);
+
+  useEffect(() => {
+    setFilteredDefects(defects);
+  }, [defects]);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const q = (e?.detail || "").toString().toLowerCase().trim();
+      if (!q) {
+        setFilteredDefects(defects);
+        return;
+      }
+      const filtered = defects.filter((d: any) => {
+        const title = (d.title || "").toString().toLowerCase();
+        const desc = (d.description || "").toString().toLowerCase();
+        return title.includes(q) || desc.includes(q);
+      });
+      setFilteredDefects(filtered);
+    };
+    window.addEventListener("globalSearch", handler as EventListener);
+    return () => window.removeEventListener("globalSearch", handler as EventListener);
+  }, [defects]);
 
   // Sync selected project when projects list changes
   useEffect(() => {
@@ -126,7 +149,7 @@ export default function Defects() {
           </select>
         </div>
 
-        {defects.length === 0 ? (
+        {filteredDefects.length === 0 ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -140,7 +163,7 @@ export default function Defects() {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {defects.map((defect) => (
+            {filteredDefects.map((defect) => (
               <Card key={defect.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">

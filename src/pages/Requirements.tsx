@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 export default function Requirements() {
   const [requirements, setRequirements] = useState([]);
+  const [filteredRequirements, setFilteredRequirements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { projects, loading: projectsLoading, refresh } = useProjects();
   const [selectedProject, setSelectedProject] = useState<number | "">("");
@@ -59,6 +60,28 @@ export default function Requirements() {
   useEffect(() => {
     fetchRequirements();
   }, [selectedProject]);
+
+  useEffect(() => {
+    setFilteredRequirements(requirements);
+  }, [requirements]);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const q = (e?.detail || "").toString().toLowerCase().trim();
+      if (!q) {
+        setFilteredRequirements(requirements);
+        return;
+      }
+      const filtered = requirements.filter((r: any) => {
+        const title = (r.title || "").toString().toLowerCase();
+        const desc = (r.description || "").toString().toLowerCase();
+        return title.includes(q) || desc.includes(q);
+      });
+      setFilteredRequirements(filtered);
+    };
+    window.addEventListener("globalSearch", handler as EventListener);
+    return () => window.removeEventListener("globalSearch", handler as EventListener);
+  }, [requirements]);
 
   // Sync selected project when projects list changes
   useEffect(() => {
@@ -135,7 +158,7 @@ export default function Requirements() {
 
         {/* Requirements List */}
         <div className="grid gap-4">
-          {requirements.map((req: any) => (
+          {filteredRequirements.map((req: any) => (
             <Card key={req.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">

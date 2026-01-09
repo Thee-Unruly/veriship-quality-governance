@@ -11,6 +11,7 @@ import { useCrud } from "@/hooks/use-crud";
 
 export default function TestCases() {
   const [testCases, setTestCases] = useState([]);
+  const [filteredTestCases, setFilteredTestCases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentTab, setCurrentTab] = useState<"ongoing" | "completed">("ongoing");
   const { projects, loading: projectsLoading, refresh } = useProjects();
@@ -46,6 +47,28 @@ export default function TestCases() {
   useEffect(() => {
     fetchTestCases();
   }, [selectedProject]);
+
+  useEffect(() => {
+    setFilteredTestCases(testCases);
+  }, [testCases]);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const q = (e?.detail || "").toString().toLowerCase().trim();
+      if (!q) {
+        setFilteredTestCases(testCases);
+        return;
+      }
+      const filtered = testCases.filter((t: any) => {
+        const title = (t.title || "").toString().toLowerCase();
+        const desc = (t.description || "").toString().toLowerCase();
+        return title.includes(q) || desc.includes(q);
+      });
+      setFilteredTestCases(filtered);
+    };
+    window.addEventListener("globalSearch", handler as EventListener);
+    return () => window.removeEventListener("globalSearch", handler as EventListener);
+  }, [testCases]);
   // Sync selected project when projects list changes
   useEffect(() => {
     if (!projects || projects.length === 0) {
@@ -145,7 +168,7 @@ export default function TestCases() {
           </button>
         </div>
 
-        {testCases.length === 0 ? (
+        {filteredTestCases.length === 0 ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -159,7 +182,7 @@ export default function TestCases() {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {testCases.map((tc: any) => (
+            {filteredTestCases.map((tc: any) => (
               <Card key={tc.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">

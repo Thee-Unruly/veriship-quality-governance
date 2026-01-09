@@ -12,6 +12,7 @@ import { useCrud } from "@/hooks/use-crud";
 
 export default function Releases() {
   const [releases, setReleases] = useState([]);
+  const [filteredReleases, setFilteredReleases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { projects, loading: projectsLoading, refresh } = useProjects();
   const [selectedProject, setSelectedProject] = useState<number | "">("");
@@ -47,6 +48,28 @@ export default function Releases() {
   useEffect(() => {
     fetchReleases();
   }, [selectedProject]);
+
+  useEffect(() => {
+    setFilteredReleases(releases);
+  }, [releases]);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      const q = (e?.detail || "").toString().toLowerCase().trim();
+      if (!q) {
+        setFilteredReleases(releases);
+        return;
+      }
+      const filtered = releases.filter((r: any) => {
+        const version = (r.version || "").toString().toLowerCase();
+        const id = (r.release_id || "").toString().toLowerCase();
+        return version.includes(q) || id.includes(q);
+      });
+      setFilteredReleases(filtered);
+    };
+    window.addEventListener("globalSearch", handler as EventListener);
+    return () => window.removeEventListener("globalSearch", handler as EventListener);
+  }, [releases]);
 
   // Sync selected project when projects list changes
   useEffect(() => {
@@ -131,7 +154,7 @@ export default function Releases() {
           </select>
         </div>
 
-        {releases.length === 0 ? (
+        {filteredReleases.length === 0 ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -145,7 +168,7 @@ export default function Releases() {
           </Card>
         ) : (
           <div className="grid gap-4">
-            {releases.map((release) => (
+            {filteredReleases.map((release) => (
               <Card key={release.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
