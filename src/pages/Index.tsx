@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { MetricCard } from "@/components/dashboard/MetricCard";
 import { RiskGauge } from "@/components/dashboard/RiskGauge";
@@ -198,9 +199,9 @@ export default function Index() {
         </div>
 
         {/* Main Content Grid */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-3 items-stretch">
           {/* Left Column - Risk Overview & Chart */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6 h-full flex flex-col">
             {/* Risk Gauges */}
             <div className="metric-card">
               <div className="mb-6">
@@ -251,9 +252,9 @@ export default function Index() {
                 <h3 className="text-lg font-semibold text-foreground">
                   Active Projects
                 </h3>
-                <button className="text-sm font-medium text-accent hover:underline">
+                <Link to="/projects" className="text-sm font-medium text-accent hover:underline">
                   View all projects
-                </button>
+                </Link>
               </div>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {projects.map((project) => (
@@ -277,34 +278,38 @@ export default function Index() {
           </div>
 
           {/* Right Column - Approvals, Activity, AI */}
-          <div className="space-y-6">
+          <div className="space-y-6 h-full flex flex-col">
             {/* Release Approval - Show first pending release or first release */}
-            {releases.length > 0 ? (
-              <ReleaseApprovalCard
-                version={releases[0].version}
-                project={projects.find(p => p.id === releases[0].project_id)?.name || "Unknown Project"}
-                releaseDate={new Date(releases[0].planned_release_date).toLocaleDateString()}
-                riskScore={releases[0].risk_score || metrics?.overall_risk_score || 0}
-                status={(releases[0].go_no_go_decision?.toLowerCase() as any) || "pending"}
-                approvers={mockApprovers}
-                releaseId={releases[0].id}
-              />
-            ) : (
-              <ReleaseApprovalCard
-                version="No pending releases"
-                project="All projects"
-                releaseDate="—"
-                riskScore={0}
-                status="pending"
-                approvers={[]}
-              />
-            )}
+            <div className="h-full">
+              {releases.length > 0 ? (
+                <ReleaseApprovalCard
+                  version={releases[0].version}
+                  project={projects.find(p => p.id === releases[0].project_id)?.name || "Unknown Project"}
+                  releaseDate={new Date(releases[0].planned_release_date).toLocaleDateString()}
+                  riskScore={releases[0].risk_score || metrics?.overall_risk_score || 0}
+                  status={(releases[0].go_no_go_decision?.toLowerCase() as any) || "pending"}
+                  approvers={mockApprovers}
+                  releaseId={releases[0].id}
+                />
+              ) : (
+                <ReleaseApprovalCard
+                  version="No pending releases"
+                  project="All projects"
+                  releaseDate="—"
+                  riskScore={0}
+                  status="pending"
+                  approvers={[]}
+                />
+              )}
+            </div>
 
-            {/* AI Insights */}
-            <AIInsightsPanel />
+            <div className="h-full">
+              <AIInsightsPanel />
+            </div>
 
-            {/* Activity Feed */}
-            <ActivityFeed activities={activities as any} />
+            <div className="h-full">
+              <ActivityFeed activities={activities as any} />
+            </div>
           </div>
         </div>
       </div>
