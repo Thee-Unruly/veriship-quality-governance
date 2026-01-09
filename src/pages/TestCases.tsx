@@ -238,15 +238,8 @@ export default function TestCases() {
                         <div>
                           <div className="text-lg font-semibold text-foreground">{g.title}</div>
                           <div className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Info className="h-3 w-3 cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Click to expand and view test cases tied to this requirement</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            Requirement details
+                            <Info className="h-3 w-3" />
+                            Click to expand and view test cases
                           </div>
                         </div>
                       </div>
