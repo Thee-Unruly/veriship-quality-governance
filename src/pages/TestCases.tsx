@@ -261,7 +261,7 @@ export default function TestCases() {
                                 <Edit2 className="h-4 w-4 text-blue-500" />
                               </Button>
                               {tc.status !== "completed" && (
-                                <Button variant="ghost" size="sm" onClick={() => handleMarkComplete(tc.id)}>Mark</Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleMarkComplete(tc.id)}>Done</Button>
                               )}
                               <Button variant="ghost" size="sm" onClick={() => handleDelete(tc.id)}>
                                 <Trash2 className="h-4 w-4 text-destructive" />
