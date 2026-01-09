@@ -222,76 +222,50 @@ export default function TestCases() {
               {groups.map((g) => (
                 <AccordionItem value={`req-${g.requirementId}`} key={String(g.requirementId)}>
                   <AccordionTrigger>
-                    <div className="flex items-center justify-between w-full">
-                      <div className="text-left">
-                        <span className="text-lg font-semibold">{g.title}</span>
-                        <span className="ml-2 text-sm text-muted-foreground">({g.testCases.length})</span>
+                    <div className="w-full flex items-center justify-between px-4 py-2 bg-background border border-border rounded-lg hover:shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div>
+                          <div className="text-lg font-semibold text-foreground">{g.title}</div>
+                          <div className="text-sm text-muted-foreground">{Number(g.requirementId) === 0 ? "No associated requirement" : "Requirement details"}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{g.testCases.length}</Badge>
                       </div>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="grid gap-4 mt-3">
                       {g.testCases.map((tc: any) => (
-                        <Card key={tc.id}>
-                          <CardHeader>
-                            <div className="flex items-start justify-between">
+                        <div key={tc.id} className="flex items-center justify-between gap-4 p-3 border rounded-md bg-card">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                              <CheckSquare className="h-5 w-5 text-primary" />
                               <div>
-                                <CardTitle className="flex items-center gap-2">
-                                  <CheckSquare className="h-5 w-5" />
-                                  {tc.title}
-                                </CardTitle>
-                                <p className="mt-2 text-sm text-muted-foreground">{tc.description}</p>
-                              </div>
-                              <div className="flex gap-2">
-                                <Badge variant={tc.is_automated ? "default" : "secondary"}>
-                                  {tc.is_automated ? "Automated" : "Manual"}
-                                </Badge>
-                                <Badge variant={tc.status === "completed" ? "outline" : "default"}>
-                                  {tc.status}
-                                </Badge>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleEdit(tc)}
-                                >
-                                  <Edit2 className="h-4 w-4 text-blue-500" />
-                                </Button>
-                                {tc.status !== "completed" && (
-                                  <Button variant="ghost" size="sm" onClick={() => handleMarkComplete(tc.id)}>
-                                    Mark Complete
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(tc.id)}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
+                                <div className="font-medium text-foreground">{tc.title}</div>
+                                <div className="text-sm text-muted-foreground">{tc.description}</div>
                               </div>
                             </div>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="grid grid-cols-4 gap-4 text-sm">
-                              <div>
-                                <p className="text-muted-foreground">ID</p>
-                                <p className="font-semibold">{tc.test_case_id}</p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">Type</p>
-                                <p className="font-semibold capitalize">{tc.test_type}</p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">Coverage</p>
-                                <p className="font-semibold">{tc.coverage_status?.toFixed(1) || 0}%</p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground">Priority</p>
-                                <p className="font-semibold">P{tc.priority}</p>
-                              </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex flex-col items-end text-sm">
+                              <span className="text-muted-foreground">Priority</span>
+                              <span className="font-semibold">P{tc.priority}</span>
                             </div>
-                          </CardContent>
-                        </Card>
+                            <Badge variant={tc.is_automated ? "default" : "secondary"}>{tc.is_automated ? "Auto" : "Manual"}</Badge>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => handleEdit(tc)}>
+                                <Edit2 className="h-4 w-4 text-blue-500" />
+                              </Button>
+                              {tc.status !== "completed" && (
+                                <Button variant="ghost" size="sm" onClick={() => handleMarkComplete(tc.id)}>Mark</Button>
+                              )}
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(tc.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </AccordionContent>
