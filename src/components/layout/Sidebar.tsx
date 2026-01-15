@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Sparkles,
   Building2,
+  Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,7 @@ const navigation = [
   { name: "Projects", href: "/projects", icon: FolderKanban },
   { name: "Requirements", href: "/requirements", icon: FileText },
   { name: "Test Cases", href: "/test-cases", icon: CheckSquare },
+  { name: "Test Runner", href: "/test-runner", icon: Play },
   { name: "Defects", href: "/defects", icon: Bug },
   { name: "Releases", href: "/releases", icon: Rocket },
 ];

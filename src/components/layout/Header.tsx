@@ -1,4 +1,4 @@
-import { Bell, Search, HelpCircle, User, LogOut } from "lucide-react";
+import { Bell, Search, HelpCircle, User, LogOut, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { useTheme } from "@/hooks/use-theme";
 
 interface UserInfo {
   id: number;
@@ -48,6 +49,7 @@ export function Header() {
 
   const [searchQuery, setSearchQuery] = useState<string>("");
   const searchTimeout = useRef<number | null>(null);
+  const { theme, toggle } = useTheme();
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -105,6 +107,17 @@ export function Header() {
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" className="text-muted-foreground">
           <HelpCircle className="h-5 w-5" />
+        </Button>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground"
+          onClick={() => toggle()}
+          aria-label="Toggle theme"
+          title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+        >
+          {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
 
         {/* Notifications */}
