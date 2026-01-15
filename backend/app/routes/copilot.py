@@ -267,25 +267,12 @@ Generate exactly {count} scenarios. Only return valid JSON with the top-level ke
 """
 
     try:
-        resp = requests.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {openai_key}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": "gpt-4",
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.2,
-                "max_tokens": 1500,
-            },
-            timeout=60,
-        )
+        # Prefer OpenRouter API key for Gemma model
+        openrouter_key = settings.openrouter_testcase_api_key or settings.openrouter_clarity_api_key
+        if not openrouter_key:
+            raise HTTPException(status_code=400, detail="OpenRouter API key not configured. Set openrouter_testcase_api_key or openrouter_clarity_api_key in your .env.")
 
-        if resp.status_code != 200:
-            raise HTTPException(status_code=resp.status_code, detail=f"OpenAI API error: {resp.text}")
-
-        ai_text = resp.json()["choices"][0]["message"]["content"]
+        ai_text = call_openrouter(openrouter_key, prompt)
 
         # Extract JSON object from model output
         json_start = ai_text.find('{')
@@ -303,10 +290,12 @@ Generate exactly {count} scenarios. Only return valid JSON with the top-level ke
 
         return {"scenarios": scenarios}
 
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Failed to call OpenAI API: {str(e)}")
+    except HTTPException:
+        raise
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse AI response as JSON: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to call AI provider: {str(e)}")
 
 
 @router.post(
