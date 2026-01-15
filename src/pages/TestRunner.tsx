@@ -116,27 +116,155 @@ export default function TestRunner() {
     const [baseUrl, setBaseUrl] = useState("http://localhost:8000");
     const [isRunning, setIsRunning] = useState(false);
     const [results, setResults] = useState<TrialRunResponse | null>(null);
-    const [testCases, setTestCases] = useState<any[]>([]);
-    const [selectedTestCaseId, setSelectedTestCaseId] = useState("");
-    const [isLoadingTestCases, setIsLoadingTestCases] = useState(false);
-    const [isConvertingToJson, setIsConvertingToJson] = useState(false);
 
-    // Load test cases from database
+    // Cascading dropdowns
+    const [projects, setProjects] = useState<any[]>([]);
+    const [requirements, setRequirements] = useState<any[]>([]);
+    const [testCases, setTestCases] = useState<any[]>([]);
+    const [selectedProjectId, setSelectedProjectId] = useState("");
+    const [selectedRequirementId, setSelectedRequirementId] = useState("");
+    const [selectedTestCaseId, setSelectedTestCaseId] = useState("");
+
+    const [isGeneratingScenarios, setIsGeneratingScenarios] = useState(false);
+    const [scenarios, setScenarios] = useState<any[]>([]);
+    const [currentScenario, setCurrentScenario] = useState(0);
+
+    // Load projects
     useEffect(() => {
-        const loadTestCases = async () => {
-            setIsLoadingTestCases(true);
+        const loadProjects = async () => {
             try {
-                const response = await fetch("http://localhost:8000/api/test-cases");
+                const response = await fetch("http://localhost:8000/api/projects");
                 const data = await response.json();
-                setTestCases(Array.isArray(data) ? data : []);
+                setProjects(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error("Error loading projects:", error);
+            }
+        };
+        loadProjects();
+    }, []);
+
+    // Load requirements when project changes
+    useEffect(() => {
+        if (!selectedProjectId) {
+            setRequirements([]);
+            setSelectedRequirementId("");
+            return;
+        }
+        const loadRequirements = async () => {
+            try {
+                const response = await fetch(`http://localhost:8000/api/requirements/${selectedProjectId}`);
+                const data = await response.json();
+                setRequirements(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error("Error loading requirements:", error);
+            }
+        };
+        loadRequirements();
+    }, [selectedProjectId]);
+
+    // Load test cases when requirement changes
+    useEffect(() => {
+        if (!selectedRequirementId) {
+            setTestCases([]);
+            setSelectedTestCaseId("");
+            return;
+        }
+        const loadTestCases = async () => {
+            try {
+                const response = await fetch(`http://localhost:8000/api/test-cases/${selectedProjectId}`);
+                const data = await response.json();
+                const filtered = data.filter((tc: any) => tc.requirement_id === parseInt(selectedRequirementId));
+                setTestCases(filtered);
             } catch (error) {
                 console.error("Error loading test cases:", error);
-            } finally {
-                setIsLoadingTestCases(false);
             }
         };
         loadTestCases();
-    }, []);
+    }, [selectedRequirementId, selectedProjectId]);
+
+    const handleGenerateAndRunScenarios = async () => {
+        if (!selectedTestCaseId) {
+            toast({
+                title: "No selection",
+                description: "Please select project, requirement, and test case",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setIsGeneratingScenarios(true);
+        setScenarios([]);
+        setCurrentScenario(0);
+
+        try {
+            const selectedCase = testCases.find(tc => tc.id === parseInt(selectedTestCaseId));
+            const selectedReq = requirements.find(r => r.id === parseInt(selectedRequirementId));
+
+            toast({
+                title: "Generating scenarios",
+                description: "AI is creating 5 test scenarios...",
+            });
+
+            // Step 1: AI generates 5 scenarios
+            const response = await fetch("http://localhost:8000/api/copilot/generate-scenarios", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    testCase: selectedCase,
+                    requirement: selectedReq,
+                    count: 5
+                }),
+            });
+
+            if (!response.ok) throw new Error("Scenario generation failed");
+
+            const data = await response.json();
+            const generatedScenarios = data.scenarios;
+            setScenarios(generatedScenarios);
+
+            toast({
+                title: "Scenarios generated",
+                description: `${generatedScenarios.length} scenarios ready. Running automatically...`,
+            });
+
+            // Step 2: Run each scenario one by one
+            for (let i = 0; i < generatedScenarios.length; i++) {
+                setCurrentScenario(i + 1);
+
+                const scenarioPayload = {
+                    test_cases: [generatedScenarios[i]],
+                    target_base_url: baseUrl,
+                };
+
+                const runResponse = await fetch("http://localhost:8000/api/trial/run", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(scenarioPayload),
+                });
+
+                const runResult = await runResponse.json();
+
+                // Update scenario with result
+                generatedScenarios[i].result = runResult;
+                setScenarios([...generatedScenarios]);
+            }
+
+            toast({
+                title: "All scenarios completed",
+                description: "Check results below",
+            });
+
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to generate/run scenarios",
+                variant: "destructive",
+            });
+        } finally {
+            setIsGeneratingScenarios(false);
+            setCurrentScenario(0);
+        }
+    };
 
     const loadSample = () => {
         setTestInput(SAMPLE_TEST_CASES);
@@ -352,6 +480,123 @@ export default function TestRunner() {
                                         </>
                                     )}
                                 </Button>
+                            </div>
+
+                            {/* AI-Driven Test Generation */}
+                            <div className="border-t pt-4 space-y-3">
+                                <Label className="text-lg font-semibold flex items-center gap-2">
+                                    <Sparkles className="h-5 w-5 text-purple-500" />
+                                    AI-Driven Test Scenarios
+                                </Label>
+                                <p className="text-sm text-muted-foreground">
+                                    Select a test case, AI will generate 5 scenarios and run them automatically
+                                </p>
+
+                                {/* Project Selection */}
+                                <div className="space-y-2">
+                                    <Label>1. Select Project</Label>
+                                    <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Choose project..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {projects.map((p) => (
+                                                <SelectItem key={p.id} value={p.id.toString()}>
+                                                    {p.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Requirement Selection */}
+                                <div className="space-y-2">
+                                    <Label>2. Select Requirement</Label>
+                                    <Select
+                                        value={selectedRequirementId}
+                                        onValueChange={setSelectedRequirementId}
+                                        disabled={!selectedProjectId}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Choose requirement..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {requirements.map((r) => (
+                                                <SelectItem key={r.id} value={r.id.toString()}>
+                                                    {r.title}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Test Case Selection */}
+                                <div className="space-y-2">
+                                    <Label>3. Select Test Case</Label>
+                                    <Select
+                                        value={selectedTestCaseId}
+                                        onValueChange={setSelectedTestCaseId}
+                                        disabled={!selectedRequirementId}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Choose test case..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {testCases.map((tc) => (
+                                                <SelectItem key={tc.id} value={tc.id.toString()}>
+                                                    {tc.title}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Generate & Run Button */}
+                                <Button
+                                    onClick={handleGenerateAndRunScenarios}
+                                    disabled={isGeneratingScenarios || !selectedTestCaseId}
+                                    className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700"
+                                    size="lg"
+                                >
+                                    {isGeneratingScenarios ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                            {currentScenario > 0 ? `Running Scenario ${currentScenario}/5...` : "Generating Scenarios..."}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="mr-2 h-5 w-5" />
+                                            Generate 5 Scenarios & Auto-Run
+                                        </>
+                                    )}
+                                </Button>
+
+                                {/* Scenario Progress */}
+                                {scenarios.length > 0 && (
+                                    <div className="mt-4 space-y-2">
+                                        <Label>Scenario Results</Label>
+                                        <div className="space-y-2">
+                                            {scenarios.map((scenario, idx) => (
+                                                <Card key={idx} className="p-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm font-medium">
+                                                            Scenario {idx + 1}: {scenario.title}
+                                                        </span>
+                                                        {scenario.result ? (
+                                                            scenario.result.passed > 0 ? (
+                                                                <Badge className="bg-green-500">✓ Passed</Badge>
+                                                            ) : (
+                                                                <Badge variant="destructive">✗ Failed</Badge>
+                                                            )
+                                                        ) : (
+                                                            <Badge variant="outline">Pending</Badge>
+                                                        )}
+                                                    </div>
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Test Cases Input */}

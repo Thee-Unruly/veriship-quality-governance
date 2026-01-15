@@ -216,6 +216,100 @@ Generate at least 3-5 test cases. Only respond with valid JSON, no additional te
 
 
 @router.post(
+    "/generate-scenarios",
+    summary="Generates multiple scenario variants for a test case using AI.",
+)
+def generate_scenarios(payload: dict, db: Session = Depends(get_db)):
+    """Generate multiple test scenario variants from a test case + requirement using OpenAI.
+
+    Expects JSON body with keys: `testCase`, `requirement` (optional), `count` (int).
+    Returns: { "scenarios": [ ... ] }
+    """
+    # Ensure API key is configured
+    openai_key = settings.openai_api_key
+    if not openai_key:
+        raise HTTPException(status_code=400, detail="OPENAI_API_KEY not configured. Set it in your .env or environment as OPENAI_API_KEY.")
+
+    test_case = payload.get("testCase")
+    requirement = payload.get("requirement")
+    count = int(payload.get("count", 5))
+
+    if not test_case:
+        raise HTTPException(status_code=400, detail="Missing testCase in request body")
+
+    # Build a clear prompt asking for JSON output
+    prompt = f"""
+You are a testing assistant. Given a single test case and optional requirement, generate {count} distinct scenario variants
+in the following JSON format:
+
+{{
+  "scenarios": [
+    {{
+      "title": "...",
+      "description": "...",
+      "priority": 1,
+      "test_type": "Positive|Negative|Edge Case|Performance|Security",
+      "steps": [
+         {{"type":"http|assert|delay","description":"...","method":"GET|POST...","url":"/path","headers":{{}},"body":{{}},"expected_status":200,"expected_contains":"..."}}
+      ],
+      "expected_result": "..."
+    }}
+  ]
+}}
+
+Input Test Case:
+{json.dumps(test_case)}
+
+Requirement (if provided):
+{json.dumps(requirement)}
+
+Generate exactly {count} scenarios. Only return valid JSON with the top-level key `scenarios` and no extra text.
+"""
+
+    try:
+        resp = requests.post(
+            "https://api.openai.com/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {openai_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "gpt-4",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.2,
+                "max_tokens": 1500,
+            },
+            timeout=60,
+        )
+
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=f"OpenAI API error: {resp.text}")
+
+        ai_text = resp.json()["choices"][0]["message"]["content"]
+
+        # Extract JSON object from model output
+        json_start = ai_text.find('{')
+        json_end = ai_text.rfind('}') + 1
+        if json_start != -1 and json_end > json_start:
+            json_str = ai_text[json_start:json_end]
+            result = json.loads(json_str)
+        else:
+            result = json.loads(ai_text)
+
+        # Expecting a top-level 'scenarios' list
+        scenarios = result.get("scenarios") if isinstance(result, dict) else None
+        if scenarios is None:
+            raise HTTPException(status_code=500, detail="AI did not return scenarios key in JSON")
+
+        return {"scenarios": scenarios}
+
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Failed to call OpenAI API: {str(e)}")
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse AI response as JSON: {str(e)}")
+
+
+@router.post(
     "/check-release-readiness/{release_id}",
     response_model=ReleaseReadinessAnalysis,
     summary="Performs a readiness check for a specific release.",
