@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Play, Upload, FileCode, Loader2, CheckCircle2, XCircle, Clock, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Play, Upload, FileCode, Loader2, CheckCircle2, XCircle, Clock, AlertCircle, Sparkles } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface TestStep {
     type: "http" | "assert" | "delay";
@@ -109,6 +116,27 @@ export default function TestRunner() {
     const [baseUrl, setBaseUrl] = useState("http://localhost:8000");
     const [isRunning, setIsRunning] = useState(false);
     const [results, setResults] = useState<TrialRunResponse | null>(null);
+    const [testCases, setTestCases] = useState<any[]>([]);
+    const [selectedTestCaseId, setSelectedTestCaseId] = useState("");
+    const [isLoadingTestCases, setIsLoadingTestCases] = useState(false);
+    const [isConvertingToJson, setIsConvertingToJson] = useState(false);
+
+    // Load test cases from database
+    useEffect(() => {
+        const loadTestCases = async () => {
+            setIsLoadingTestCases(true);
+            try {
+                const response = await fetch("http://localhost:8000/api/test-cases");
+                const data = await response.json();
+                setTestCases(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error("Error loading test cases:", error);
+            } finally {
+                setIsLoadingTestCases(false);
+            }
+        };
+        loadTestCases();
+    }, []);
 
     const loadSample = () => {
         setTestInput(SAMPLE_TEST_CASES);
@@ -116,6 +144,47 @@ export default function TestRunner() {
             title: "Sample loaded",
             description: "Example test cases loaded. Modify as needed.",
         });
+    };
+
+    const handleLoadFromDatabase = async () => {
+        if (!selectedTestCaseId) {
+            toast({
+                title: "No selection",
+                description: "Please select a test case",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setIsConvertingToJson(true);
+        try {
+            const selectedCase = testCases.find(tc => tc.id === parseInt(selectedTestCaseId));
+
+            // Call AI to convert test case to JSON
+            const response = await fetch("http://localhost:8000/api/copilot/convert-test-to-json", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ testCase: selectedCase }),
+            });
+
+            if (!response.ok) throw new Error("Conversion failed");
+
+            const data = await response.json();
+            setTestInput(JSON.stringify(data.json_format, null, 2));
+
+            toast({
+                title: "Test case loaded",
+                description: `${selectedCase.title} converted to JSON and ready to run`,
+            });
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to convert test case",
+                variant: "destructive",
+            });
+        } finally {
+            setIsConvertingToJson(false);
+        }
     };
 
     const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -248,6 +317,41 @@ export default function TestRunner() {
                                     placeholder="http://localhost:8000"
                                     className="font-mono text-sm"
                                 />
+                            </div>
+
+                            {/* Load from Database Section */}
+                            <div className="border-t pt-4 space-y-3">
+                                <Label>Load Test Case from Database</Label>
+                                <Select value={selectedTestCaseId} onValueChange={setSelectedTestCaseId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a test case..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {testCases.map((tc) => (
+                                            <SelectItem key={tc.id} value={tc.id.toString()}>
+                                                {tc.title}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    onClick={handleLoadFromDatabase}
+                                    disabled={isConvertingToJson || !selectedTestCaseId}
+                                    variant="outline"
+                                    className="w-full"
+                                >
+                                    {isConvertingToJson ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Converting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Sparkles className="mr-2 h-4 w-4" />
+                                            Load & Convert with AI
+                                        </>
+                                    )}
+                                </Button>
                             </div>
 
                             {/* Test Cases Input */}
