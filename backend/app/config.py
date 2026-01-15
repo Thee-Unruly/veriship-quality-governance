@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     
     # API
-    api_host: str = "0.0.0.0"
+    api_host: str = "localhost"
     api_port: int = 8000
     environment: str = "development"
     api_environment: str = "development"

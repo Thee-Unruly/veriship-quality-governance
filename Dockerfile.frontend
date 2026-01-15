@@ -15,7 +15,7 @@ COPY index.html vite.config.ts tailwind.config.ts tsconfig.json tsconfig.app.jso
 COPY postcss.config.js eslint.config.js components.json ./
 
 # Expose port
-EXPOSE 8080
+EXPOSE 5173
 
 # Run development server
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

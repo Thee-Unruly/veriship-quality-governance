@@ -1,3 +1,5 @@
+# To start the backend service, run:
+# docker compose up app
 services:
   postgres:
     image: postgres:16-alpine
@@ -33,30 +35,49 @@ services:
 
   app:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     container_name: veriship-app
     ports:
       - "8000:8000"
-      - "8082:8080"
     environment:
       DATABASE_URL: postgresql://veriship_user:veriship_dev_password@postgres:5432/veriship_db
       REDIS_URL: redis://redis:6379
       ENVIRONMENT: development
-      CORS_ORIGINS: '["http://localhost:8082"]'
-      VITE_API_URL: http://localhost:8000
+      CORS_ORIGINS: '["http://localhost:5173","http://localhost:8080"]'
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
-      - ./backend:/app/backend
-      - ./src:/app/src
-      - ./public:/app/public
+      - ./backend:/app
     networks:
       - veriship-network
-    command: /app/start.sh
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: veriship-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - app
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./index.html:/app/index.html
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./tailwind.config.ts:/app/tailwind.config.ts
+      - ./postcss.config.js:/app/postcss.config.js
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tsconfig.app.json:/app/tsconfig.app.json
+      - ./tsconfig.node.json:/app/tsconfig.node.json
+    networks:
+      - veriship-network
 
 volumes:
   postgres_data:

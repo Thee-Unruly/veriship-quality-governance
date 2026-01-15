@@ -2,10 +2,20 @@ import asyncio
 import uuid
 import shlex
 import subprocess
-from typing import Dict
+import json
+import re
+import tempfile
+import os
+from typing import Dict, Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Depends
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.models import Requirement
+from app.config import settings
+import requests
 
 router = APIRouter()
 
@@ -63,6 +73,192 @@ def start_test_run(background_tasks: BackgroundTasks, payload: dict):
     background_tasks.add_task(_start_process_and_stream, job_id, cmd)
 
     return {"job_id": job_id}
+
+
+def _call_openrouter(api_key: str, user_message: str) -> str:
+    """Call OpenRouter API for test code generation."""
+    try:
+        response = requests.post(
+            settings.openrouter_api_url,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "HTTP-Referer": settings.openrouter_site_url,
+                "X-Title": settings.openrouter_site_name,
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": settings.openrouter_model,
+                "messages": [{"role": "user", "content": user_message}]
+            },
+            timeout=30
+        )
+        
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=f"OpenRouter API error: {response.text}"
+            )
+        
+        return response.json()["choices"][0]["message"]["content"]
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to call OpenRouter API: {str(e)}"
+        )
+
+
+def _validate_playwright_code(code: str) -> bool:
+    """
+    Validate that generated Playwright code is safe to execute.
+    Checks for syntax and forbidden patterns.
+    """
+    # Check for syntax errors with basic import/function detection
+    dangerous_patterns = [
+        r'__import__',
+        r'eval\s*\(',
+        r'exec\s*\(',
+        r'subprocess',
+        r'os\.system',
+        r'open\s*\(',
+        r'rmdir',
+        r'remove\s*\(',
+    ]
+    
+    for pattern in dangerous_patterns:
+        if re.search(pattern, code):
+            return False
+    
+    # Try to compile the code
+    try:
+        compile(code, '<string>', 'exec')
+    except SyntaxError:
+        return False
+    
+    return True
+
+
+@router.post("/generate-and-run")
+def generate_and_run_test(
+    background_tasks: BackgroundTasks,
+    payload: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Generate Playwright test code from a requirement and execute it.
+    
+    Payload:
+      {
+        "requirement_id": <int>,
+        "target_base_url": "https://example.com",  # optional
+        "browser": "chromium"  # optional, default chromium
+      }
+    
+    Returns: { "job_id": "<uuid>", "requirement": {...} }
+    """
+    job_id = str(uuid.uuid4())
+    requirement_id = payload.get("requirement_id")
+    target_base_url = payload.get("target_base_url", "http://localhost:3000")
+    browser = payload.get("browser", "chromium")
+    
+    if not requirement_id:
+        raise HTTPException(status_code=400, detail="Missing 'requirement_id'")
+    
+    # Fetch requirement
+    requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
+    if not requirement:
+        raise HTTPException(status_code=404, detail="Requirement not found")
+    
+    # Create queue for this job
+    queue: asyncio.Queue = asyncio.Queue()
+    JOB_QUEUES[job_id] = queue
+    
+    # Prepare AI generation task
+    def _generate_and_execute():
+        loop = asyncio.get_event_loop()
+        
+        try:
+            # Step 1: Generate Playwright test code via AI
+            loop.call_soon_threadsafe(queue.put_nowait, "📋 Generating Playwright test code from requirement...")
+            
+            prompt = f"""Generate a complete Playwright test script for the following requirement:
+
+Requirement: {requirement.title}
+Description: {requirement.description}
+Target URL: {target_base_url}
+
+Generate production-ready Playwright code that:
+1. Tests the requirement thoroughly
+2. Uses best practices (waits, selectors, assertions)
+3. Includes error handling
+4. Is ready to execute immediately
+
+Return ONLY the JavaScript/TypeScript Playwright code, no explanations.
+The code should create a test file that can be run with: npx playwright test <filename>
+
+Wrap the code in a single code block marked with ```javascript or ```typescript"""
+
+            ai_response = _call_openrouter(
+                settings.openrouter_testcase_api_key,
+                prompt
+            )
+            
+            # Extract code block from markdown
+            code_match = re.search(r'```(?:javascript|typescript|js|ts)?\n(.*?)\n```', ai_response, re.DOTALL)
+            if code_match:
+                test_code = code_match.group(1).strip()
+            else:
+                test_code = ai_response.strip()
+            
+            loop.call_soon_threadsafe(queue.put_nowait, "✓ Test code generated successfully")
+            loop.call_soon_threadsafe(queue.put_nowait, f"🔍 Validating code...")
+            
+            # Step 2: Validate code
+            if not _validate_playwright_code(test_code):
+                loop.call_soon_threadsafe(queue.put_nowait, "❌ Validation failed: Code contains unsafe patterns or syntax errors")
+                loop.call_soon_threadsafe(queue.put_nowait, "__DONE__")
+                return
+            
+            loop.call_soon_threadsafe(queue.put_nowait, "✓ Code validation passed")
+            
+            # Step 3: Write code to temp file and execute with Playwright
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.spec.ts', delete=False) as f:
+                f.write(test_code)
+                temp_file = f.name
+            
+            try:
+                loop.call_soon_threadsafe(queue.put_nowait, f"🚀 Starting test execution: {temp_file}")
+                
+                # Run Playwright test
+                cmd = f"npx playwright test {temp_file} --reporter=list"
+                _start_process_and_stream(job_id, cmd)
+                
+            finally:
+                # Cleanup temp file
+                try:
+                    os.unlink(temp_file)
+                except:
+                    pass
+        
+        except HTTPException as e:
+            loop.call_soon_threadsafe(queue.put_nowait, f"ERROR: {e.detail}")
+            loop.call_soon_threadsafe(queue.put_nowait, "__DONE__")
+        except Exception as e:
+            loop.call_soon_threadsafe(queue.put_nowait, f"ERROR: {str(e)}")
+            loop.call_soon_threadsafe(queue.put_nowait, "__DONE__")
+    
+    # Start generation in background
+    background_tasks.add_task(_generate_and_execute)
+    
+    return {
+        "job_id": job_id,
+        "requirement": {
+            "id": requirement.id,
+            "requirement_id": requirement.requirement_id,
+            "title": requirement.title,
+            "description": requirement.description
+        }
+    }
+
 
 
 async def _sse_generator(job_id: str):
