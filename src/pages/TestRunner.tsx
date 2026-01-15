@@ -128,6 +128,7 @@ export default function TestRunner() {
     const [isGeneratingScenarios, setIsGeneratingScenarios] = useState(false);
     const [scenarios, setScenarios] = useState<any[]>([]);
     const [currentScenario, setCurrentScenario] = useState(0);
+    const [isConvertingToJson, setIsConvertingToJson] = useState(false);
 
     // Load projects
     useEffect(() => {

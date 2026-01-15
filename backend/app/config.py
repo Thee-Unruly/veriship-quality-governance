@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     # OpenRouter API Configuration
     openrouter_clarity_api_key: str = ""
     openrouter_testcase_api_key: str = ""
+    openrouter_trial_api_key: str = ""
     openrouter_api_url: str = "https://openrouter.ai/api/v1/chat/completions"
     openrouter_model: str = "google/gemma-3-27b-it:free"
     openrouter_site_url: str = "http://localhost:8082"
