@@ -4,9 +4,10 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckSquare, Plus, Trash2, Edit2, Info } from "lucide-react";
+import { CheckSquare, Plus, Trash2, Edit2, Info, Play } from "lucide-react";
 import { CreateTestCaseModal } from "@/components/modals/CreateTestCaseModal";
 import { EditTestCaseModal } from "@/components/modals/EditTestCaseModal";
+import { RunTestSimulationModal } from "@/components/modals/RunTestSimulationModal";
 import { useCrud } from "@/hooks/use-crud";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
@@ -21,6 +22,7 @@ export default function TestCases() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any>(null);
+  const [isRunTestModalOpen, setIsRunTestModalOpen] = useState(false);
 
   const getPriorityLabel = (priority: number) => {
     switch (priority) {
@@ -138,6 +140,11 @@ export default function TestCases() {
   const handleEdit = (testCase: any) => {
     setSelectedTestCase(testCase);
     setIsEditModalOpen(true);
+  };
+
+  const handleRunTest = (testCase: any) => {
+    setSelectedTestCase(testCase);
+    setIsRunTestModalOpen(true);
   };
 
   const handleMarkComplete = async (id: number) => {
@@ -261,6 +268,9 @@ export default function TestCases() {
                               </div>
                             </div>
                             <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => handleRunTest(tc)} title="Run test simulation">
+                                <Play className="h-4 w-4 text-orange-500" />
+                              </Button>
                               <Button variant="ghost" size="sm" onClick={() => handleEdit(tc)}>
                                 <Edit2 className="h-4 w-4 text-blue-500" />
                               </Button>
@@ -304,6 +314,13 @@ export default function TestCases() {
         testCase={selectedTestCase}
         onSuccess={fetchTestCases}
       />
+      {selectedTestCase && (
+        <RunTestSimulationModal
+          isOpen={isRunTestModalOpen}
+          onOpenChange={setIsRunTestModalOpen}
+          testCase={selectedTestCase}
+        />
+      )}
     </DashboardLayout>
   );
 }
