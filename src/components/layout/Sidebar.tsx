@@ -24,9 +24,9 @@ const navigation = [
   { name: "Projects", href: "/projects", icon: FolderKanban },
   { name: "Requirements", href: "/requirements", icon: FileText },
   { name: "Test Cases", href: "/test-cases", icon: CheckSquare },
-  { name: "Test Runner", href: "/test-runner", icon: Play },
   { name: "Defects", href: "/defects", icon: Bug },
   { name: "Releases", href: "/releases", icon: Rocket },
+  { name: "Test Runner", href: "/test-runner", icon: Play, fade: true },
 ];
 
 const adminNavigation = [
@@ -94,7 +94,8 @@ export function Sidebar() {
                   to={item.href}
                   className={cn(
                     "nav-item",
-                    isActive && "nav-item-active"
+                    isActive && "nav-item-active",
+                    item.fade && "opacity-40 hover:opacity-100 transition-opacity"
                   )}
                 >
                   <item.icon className="h-5 w-5 flex-shrink-0" />
