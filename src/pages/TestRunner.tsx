@@ -66,6 +66,58 @@ interface TrialRunResponse {
     results: TestCaseResult[];
 }
 
+// Playwright Automation Types
+interface PlaywrightExecutionConfig {
+    browser_type: "chromium" | "firefox" | "webkit";
+    headless: boolean;
+    viewport: { width: number; height: number };
+    timeout: number;
+    base_url: string;
+    record_trace: boolean;
+    record_video: boolean;
+    screenshot_on_failure: boolean;
+    retry_count: number;
+    environment: string;
+}
+
+interface PlaywrightStepResult {
+    step_number: number;
+    action_type: string;
+    description: string;
+    selector: string | null;
+    status: "passed" | "failed" | "skipped";
+    duration_ms: number;
+    timestamp: string;
+    value?: any;
+    error?: string;
+    screenshot_path?: string;
+}
+
+interface PlaywrightExecutionResponse {
+    execution_id: number;
+    test_case_id: number;
+    status: string;
+    start_time: string;
+    end_time: string | null;
+    duration_ms: number;
+    steps: PlaywrightStepResult[];
+    error_message?: string;
+    screenshot_path?: string;
+    trace_path?: string;
+    network_logs_count: number;
+    browser_type: string;
+    environment: string;
+    defect_id?: number;
+}
+
+interface PlaywrightRunnerStatus {
+    is_running: boolean;
+    browser_type: string | null;
+    contexts_count: number;
+    active_executions_count: number;
+    queued_executions_count: number;
+}
+
 const SAMPLE_TEST_CASES = `{
   "target_base_url": "https://api.example.com",
   "test_cases": [
@@ -131,6 +183,25 @@ export default function TestRunner() {
     const [scenarios, setScenarios] = useState<any[]>([]);
     const [currentScenario, setCurrentScenario] = useState(0);
     const [isConvertingToJson, setIsConvertingToJson] = useState(false);
+
+    // Playwright Automation State
+    const [activeTab, setActiveTab] = useState("trial");
+    const [playwrightConfig, setPlaywrightConfig] = useState<PlaywrightExecutionConfig>({
+        browser_type: "chromium",
+        headless: true,
+        viewport: { width: 1280, height: 720 },
+        timeout: 30000,
+        base_url: "http://localhost:8000",
+        record_trace: true,
+        record_video: false,
+        screenshot_on_failure: true,
+        retry_count: 0,
+        environment: "development",
+    });
+    const [playwrightResult, setPlaywrightResult] = useState<PlaywrightExecutionResponse | null>(null);
+    const [playwrightStatus, setPlaywrightStatus] = useState<PlaywrightRunnerStatus | null>(null);
+    const [isPlaywrightRunning, setIsPlaywrightRunning] = useState(false);
+    const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
     // Load projects
     useEffect(() => {
