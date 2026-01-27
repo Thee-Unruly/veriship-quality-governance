@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Upload, FileCode, Loader2, CheckCircle2, XCircle, Clock, AlertCircle, Sparkles } from "lucide-react";
+import { Play, Upload, FileCode, Loader2, CheckCircle2, XCircle, Clock, AlertCircle, Sparkles, Monitor, Globe, Camera, FileDown, RefreshCw, StopCircle, Settings2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 import {
     Select,
     SelectContent,
