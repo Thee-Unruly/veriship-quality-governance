@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
-import { Play, Upload, FileCode, Loader2, Sparkles, Monitor, Globe, Camera, FileDown, RefreshCw, StopCircle, Eye, EyeOff, Film, Image, RotateCcw } from "lucide-react";
+import { Play, Upload, FileCode, Loader2, Sparkles, Monitor, Globe, Camera, FileDown, RefreshCw, StopCircle, Eye, EyeOff, Film, Image } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
     Select,
     SelectContent,
@@ -27,6 +26,57 @@ import {
     LoadingState,
     ScenarioCard,
 } from "@/components/test-runner";
+
+// Animation variants
+const tabContentVariants = {
+    hidden: { opacity: 0, y: 20, scale: 0.98 },
+    visible: { 
+        opacity: 1, 
+        y: 0, 
+        scale: 1,
+        transition: { 
+            duration: 0.4, 
+            ease: [0.25, 0.46, 0.45, 0.94] as const,
+            staggerChildren: 0.1
+        }
+    },
+    exit: { 
+        opacity: 0, 
+        y: -20, 
+        scale: 0.98,
+        transition: { duration: 0.3 }
+    }
+};
+
+const cardVariants = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { 
+        opacity: 1, 
+        y: 0,
+        transition: { duration: 0.5 }
+    }
+};
+
+const resultsVariants = {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: { 
+        opacity: 1, 
+        scale: 1,
+        transition: { 
+            duration: 0.4, 
+            staggerChildren: 0.08
+        }
+    }
+};
+
+const itemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: { 
+        opacity: 1, 
+        x: 0,
+        transition: { duration: 0.3 }
+    }
+};
 
 // Types
 interface StepResultType {
@@ -462,17 +512,36 @@ export default function TestRunner() {
         <DashboardLayout>
             <div className="space-y-8 p-6 max-w-7xl mx-auto">
                 {/* Header */}
-                <TestRunnerHeader />
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                >
+                    <TestRunnerHeader />
+                </motion.div>
 
                 {/* Tab Navigation */}
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                    <div className="inline-flex h-12 items-center rounded-xl bg-muted/50 p-1.5 text-muted-foreground border border-border/50">
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.2 }}
+                >
+                    <div className="inline-flex h-12 items-center rounded-xl bg-muted/50 p-1.5 text-muted-foreground border border-border/50 relative">
+                        {/* Animated background indicator */}
+                        <motion.div
+                            className="absolute h-[calc(100%-12px)] rounded-lg bg-card shadow-sm border border-border/50"
+                            layoutId="activeTab"
+                            initial={false}
+                            animate={{
+                                x: activeTab === "trial" ? 6 : "calc(50% + 3px)",
+                                width: "calc(50% - 9px)"
+                            }}
+                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                        />
                         <button
                             onClick={() => setActiveTab("trial")}
-                            className={`inline-flex items-center justify-center gap-2.5 rounded-lg px-6 py-2.5 text-sm font-medium transition-all ${
-                                activeTab === "trial"
-                                    ? "bg-card text-foreground shadow-sm border border-border/50"
-                                    : "hover:text-foreground"
+                            className={`relative z-10 inline-flex items-center justify-center gap-2.5 rounded-lg px-6 py-2.5 text-sm font-medium transition-colors ${
+                                activeTab === "trial" ? "text-foreground" : "hover:text-foreground"
                             }`}
                         >
                             <Globe className="h-4 w-4" />
@@ -480,553 +549,699 @@ export default function TestRunner() {
                         </button>
                         <button
                             onClick={() => setActiveTab("playwright")}
-                            className={`inline-flex items-center justify-center gap-2.5 rounded-lg px-6 py-2.5 text-sm font-medium transition-all ${
-                                activeTab === "playwright"
-                                    ? "bg-card text-foreground shadow-sm border border-border/50"
-                                    : "hover:text-foreground"
+                            className={`relative z-10 inline-flex items-center justify-center gap-2.5 rounded-lg px-6 py-2.5 text-sm font-medium transition-colors ${
+                                activeTab === "playwright" ? "text-foreground" : "hover:text-foreground"
                             }`}
                         >
                             <Monitor className="h-4 w-4" />
                             <span>Playwright</span>
                         </button>
                     </div>
+                </motion.div>
 
-                    {/* Trial Runner Tab */}
-                    <TabsContent value="trial" className="mt-8">
-                        <div className="grid gap-8 lg:grid-cols-2">
-                            {/* Configuration Card */}
-                            <ConfigCard
-                                icon={FileCode}
-                                title="Test Configuration"
-                                description="Configure and run API tests with JSON specifications"
-                            >
-                                {/* Base URL */}
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Target Base URL</Label>
-                                    <Input
-                                        value={baseUrl}
-                                        onChange={(e) => setBaseUrl(e.target.value)}
-                                        placeholder="http://localhost:8000"
-                                        className="font-mono text-sm h-10 rounded-lg border-border/50 focus:border-accent"
-                                    />
-                                </div>
-
-                                {/* AI Scenarios Section */}
-                                <div className="p-5 rounded-xl bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-fuchsia-500/5 border border-violet-500/20 space-y-4">
-                                    <div className="flex items-start gap-3">
-                                        <div className="p-2 rounded-lg bg-violet-500/20">
-                                            <Sparkles className="h-4 w-4 text-violet-500" />
-                                        </div>
-                                        <div>
-                                            <h4 className="font-semibold text-foreground">AI-Powered Scenarios</h4>
-                                            <p className="text-sm text-muted-foreground mt-0.5">
-                                                Generate and run 5 test scenarios automatically
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <TestCaseSelector
-                                        projects={projects}
-                                        requirements={requirements}
-                                        testCases={testCases}
-                                        selectedProjectId={selectedProjectId}
-                                        selectedRequirementId={selectedRequirementId}
-                                        selectedTestCaseId={selectedTestCaseId}
-                                        onProjectChange={setSelectedProjectId}
-                                        onRequirementChange={setSelectedRequirementId}
-                                        onTestCaseChange={setSelectedTestCaseId}
-                                    />
-
-                                    <Button
-                                        onClick={handleGenerateAndRunScenarios}
-                                        disabled={isGeneratingScenarios || !selectedTestCaseId}
-                                        className="w-full h-11 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl font-medium"
+                {/* Tab Content with AnimatePresence */}
+                <AnimatePresence mode="wait">
+                    {activeTab === "trial" && (
+                        <motion.div
+                            key="trial"
+                            variants={tabContentVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="mt-8"
+                        >
+                            <div className="grid gap-8 lg:grid-cols-2">
+                                {/* Configuration Card */}
+                                <motion.div variants={cardVariants}>
+                                    <ConfigCard
+                                        icon={FileCode}
+                                        title="Test Configuration"
+                                        description="Configure and run API tests with JSON specifications"
                                     >
-                                        {isGeneratingScenarios ? (
-                                            <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                {currentScenario > 0 ? `Running ${currentScenario}/5...` : "Generating..."}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Sparkles className="mr-2 h-4 w-4" />
-                                                Generate & Auto-Run 5 Scenarios
-                                            </>
-                                        )}
-                                    </Button>
-
-                                    {/* Scenario Results */}
-                                    {scenarios.length > 0 && (
-                                        <div className="space-y-2 pt-2">
-                                            {scenarios.map((scenario, idx) => (
-                                                <ScenarioCard
-                                                    key={idx}
-                                                    index={idx}
-                                                    title={scenario.title}
-                                                    result={scenario.result}
-                                                    isRunning={currentScenario === idx + 1}
-                                                />
-                                            ))}
+                                        {/* Base URL */}
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium">Target Base URL</Label>
+                                            <Input
+                                                value={baseUrl}
+                                                onChange={(e) => setBaseUrl(e.target.value)}
+                                                placeholder="http://localhost:8000"
+                                                className="font-mono text-sm h-10 rounded-lg border-border/50 focus:border-accent"
+                                            />
                                         </div>
-                                    )}
-                                </div>
 
-                                {/* Manual JSON Input */}
-                                <div className="space-y-3 pt-4 border-t border-border/50">
-                                    <Label className="text-sm font-medium">Manual JSON Input</Label>
-                                    <div className="flex gap-2 mb-3">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleLoadFromDatabase}
-                                            disabled={isConvertingToJson || !selectedTestCaseId}
-                                            className="rounded-lg"
+                                        {/* AI Scenarios Section */}
+                                        <motion.div 
+                                            className="p-5 rounded-xl bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-fuchsia-500/5 border border-violet-500/20 space-y-4"
+                                            whileHover={{ scale: 1.01 }}
+                                            transition={{ type: "spring", stiffness: 400 }}
                                         >
-                                            {isConvertingToJson ? (
-                                                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                                            ) : (
-                                                <Sparkles className="mr-2 h-3.5 w-3.5" />
-                                            )}
-                                            Convert with AI
-                                        </Button>
-                                        <Button variant="outline" size="sm" onClick={loadSample} className="rounded-lg">
-                                            <FileCode className="mr-2 h-3.5 w-3.5" />
-                                            Load Sample
-                                        </Button>
-                                        <Button variant="outline" size="sm" asChild className="rounded-lg">
-                                            <label className="cursor-pointer">
-                                                <Upload className="mr-2 h-3.5 w-3.5" />
-                                                Upload
-                                                <input type="file" accept=".json" className="hidden" onChange={handleFileUpload} />
-                                            </label>
-                                        </Button>
-                                    </div>
-                                    <Textarea
-                                        value={testInput}
-                                        onChange={(e) => setTestInput(e.target.value)}
-                                        placeholder='{"test_cases": [...]}'
-                                        className="font-mono text-sm min-h-[200px] rounded-xl border-border/50 focus:border-accent bg-muted/30"
-                                    />
-                                    <Button
-                                        onClick={runTests}
-                                        disabled={isRunning || !testInput.trim()}
-                                        className="w-full h-11 bg-gradient-to-r from-accent to-blue-500 hover:from-accent/90 hover:to-blue-500/90 text-white rounded-xl"
-                                    >
-                                        {isRunning ? (
-                                            <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Running Tests...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Play className="mr-2 h-4 w-4" />
-                                                Run Tests
-                                            </>
-                                        )}
-                                    </Button>
-                                </div>
-                            </ConfigCard>
+                                            <div className="flex items-start gap-3">
+                                                <motion.div 
+                                                    className="p-2 rounded-lg bg-violet-500/20"
+                                                    animate={{ rotate: [0, 5, -5, 0] }}
+                                                    transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
+                                                >
+                                                    <Sparkles className="h-4 w-4 text-violet-500" />
+                                                </motion.div>
+                                                <div>
+                                                    <h4 className="font-semibold text-foreground">AI-Powered Scenarios</h4>
+                                                    <p className="text-sm text-muted-foreground mt-0.5">
+                                                        Generate and run 5 test scenarios automatically
+                                                    </p>
+                                                </div>
+                                            </div>
 
-                            {/* Results Card */}
-                            <ConfigCard
-                                icon={Play}
-                                title="Execution Results"
-                                description="Real-time test execution feedback and metrics"
-                            >
-                                {isRunning && (
-                                    <LoadingState message="Executing tests..." subMessage="This may take a moment" />
-                                )}
+                                            <TestCaseSelector
+                                                projects={projects}
+                                                requirements={requirements}
+                                                testCases={testCases}
+                                                selectedProjectId={selectedProjectId}
+                                                selectedRequirementId={selectedRequirementId}
+                                                selectedTestCaseId={selectedTestCaseId}
+                                                onProjectChange={setSelectedProjectId}
+                                                onRequirementChange={setSelectedRequirementId}
+                                                onTestCaseChange={setSelectedTestCaseId}
+                                            />
 
-                                {!isRunning && !results && (
-                                    <EmptyState
+                                            <motion.div whileTap={{ scale: 0.98 }}>
+                                                <Button
+                                                    onClick={handleGenerateAndRunScenarios}
+                                                    disabled={isGeneratingScenarios || !selectedTestCaseId}
+                                                    className="w-full h-11 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl font-medium"
+                                                >
+                                                    {isGeneratingScenarios ? (
+                                                        <>
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                            {currentScenario > 0 ? `Running ${currentScenario}/5...` : "Generating..."}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Sparkles className="mr-2 h-4 w-4" />
+                                                            Generate & Auto-Run 5 Scenarios
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </motion.div>
+
+                                            {/* Scenario Results */}
+                                            <AnimatePresence>
+                                                {scenarios.length > 0 && (
+                                                    <motion.div 
+                                                        className="space-y-2 pt-2"
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: "auto" }}
+                                                        exit={{ opacity: 0, height: 0 }}
+                                                    >
+                                                        {scenarios.map((scenario, idx) => (
+                                                            <motion.div
+                                                                key={idx}
+                                                                initial={{ opacity: 0, x: -20 }}
+                                                                animate={{ opacity: 1, x: 0 }}
+                                                                transition={{ delay: idx * 0.1 }}
+                                                            >
+                                                                <ScenarioCard
+                                                                    index={idx}
+                                                                    title={scenario.title}
+                                                                    result={scenario.result}
+                                                                    isRunning={currentScenario === idx + 1}
+                                                                />
+                                                            </motion.div>
+                                                        ))}
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </motion.div>
+
+                                        {/* Manual JSON Input */}
+                                        <div className="space-y-3 pt-4 border-t border-border/50">
+                                            <Label className="text-sm font-medium">Manual JSON Input</Label>
+                                            <div className="flex gap-2 mb-3">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handleLoadFromDatabase}
+                                                    disabled={isConvertingToJson || !selectedTestCaseId}
+                                                    className="rounded-lg"
+                                                >
+                                                    {isConvertingToJson ? (
+                                                        <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                                                    ) : (
+                                                        <Sparkles className="mr-2 h-3.5 w-3.5" />
+                                                    )}
+                                                    Convert with AI
+                                                </Button>
+                                                <Button variant="outline" size="sm" onClick={loadSample} className="rounded-lg">
+                                                    <FileCode className="mr-2 h-3.5 w-3.5" />
+                                                    Load Sample
+                                                </Button>
+                                                <Button variant="outline" size="sm" asChild className="rounded-lg">
+                                                    <label className="cursor-pointer">
+                                                        <Upload className="mr-2 h-3.5 w-3.5" />
+                                                        Upload
+                                                        <input type="file" accept=".json" className="hidden" onChange={handleFileUpload} />
+                                                    </label>
+                                                </Button>
+                                            </div>
+                                            <Textarea
+                                                value={testInput}
+                                                onChange={(e) => setTestInput(e.target.value)}
+                                                placeholder='{"test_cases": [...]}'
+                                                className="font-mono text-sm min-h-[200px] rounded-xl border-border/50 focus:border-accent bg-muted/30"
+                                            />
+                                            <motion.div whileTap={{ scale: 0.98 }}>
+                                                <Button
+                                                    onClick={runTests}
+                                                    disabled={isRunning || !testInput.trim()}
+                                                    className="w-full h-11 bg-gradient-to-r from-accent to-blue-500 hover:from-accent/90 hover:to-blue-500/90 text-white rounded-xl"
+                                                >
+                                                    {isRunning ? (
+                                                        <>
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                            Running Tests...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Play className="mr-2 h-4 w-4" />
+                                                            Run Tests
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </motion.div>
+                                        </div>
+                                    </ConfigCard>
+                                </motion.div>
+
+                                {/* Results Card */}
+                                <motion.div variants={cardVariants}>
+                                    <ConfigCard
                                         icon={Play}
-                                        title="Ready to test"
-                                        description="Configure your tests on the left and click Run to see results here"
-                                    />
-                                )}
+                                        title="Execution Results"
+                                        description="Real-time test execution feedback and metrics"
+                                    >
+                                        <AnimatePresence mode="wait">
+                                            {isRunning && (
+                                                <motion.div
+                                                    key="loading"
+                                                    initial={{ opacity: 0, scale: 0.9 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.9 }}
+                                                >
+                                                    <LoadingState message="Executing tests..." subMessage="This may take a moment" />
+                                                </motion.div>
+                                            )}
 
-                                {results && (
-                                    <div className="space-y-6">
-                                        <ResultsSummary
-                                            total={results.total_cases}
-                                            passed={results.passed}
-                                            failed={results.failed}
-                                            skipped={results.skipped}
-                                            durationMs={results.total_duration_ms}
-                                        />
+                                            {!isRunning && !results && (
+                                                <motion.div
+                                                    key="empty"
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    exit={{ opacity: 0 }}
+                                                >
+                                                    <EmptyState
+                                                        icon={Play}
+                                                        title="Ready to test"
+                                                        description="Configure your tests on the left and click Run to see results here"
+                                                    />
+                                                </motion.div>
+                                            )}
 
-                                        {/* Test Case Details */}
-                                        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
-                                            {results.results.map((result, idx) => (
-                                                <div key={idx} className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-3">
-                                                    <div className="flex items-center justify-between">
-                                                        <h4 className="font-medium text-foreground">{result.title}</h4>
-                                                        <Badge className={
-                                                            result.status === "passed" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
-                                                            result.status === "failed" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
-                                                            "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                                                        }>
-                                                            {result.status}
-                                                        </Badge>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        {result.steps.map((step) => (
-                                                            <StepResult
-                                                                key={step.step_number}
-                                                                stepNumber={step.step_number}
-                                                                description={step.description}
-                                                                status={step.status}
-                                                                durationMs={step.duration_ms}
-                                                                details={step.details}
-                                                                error={step.error}
-                                                            />
+                                            {results && (
+                                                <motion.div
+                                                    key="results"
+                                                    variants={resultsVariants}
+                                                    initial="hidden"
+                                                    animate="visible"
+                                                    className="space-y-6"
+                                                >
+                                                    <motion.div variants={itemVariants}>
+                                                        <ResultsSummary
+                                                            total={results.total_cases}
+                                                            passed={results.passed}
+                                                            failed={results.failed}
+                                                            skipped={results.skipped}
+                                                            durationMs={results.total_duration_ms}
+                                                        />
+                                                    </motion.div>
+
+                                                    {/* Test Case Details */}
+                                                    <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+                                                        {results.results.map((result, idx) => (
+                                                            <motion.div 
+                                                                key={idx} 
+                                                                className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-3"
+                                                                variants={itemVariants}
+                                                                whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <h4 className="font-medium text-foreground">{result.title}</h4>
+                                                                    <Badge className={
+                                                                        result.status === "passed" ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
+                                                                        result.status === "failed" ? "bg-rose-500/10 text-rose-600 border-rose-500/20" :
+                                                                        "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                                                    }>
+                                                                        {result.status}
+                                                                    </Badge>
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    {result.steps.map((step) => (
+                                                                        <StepResult
+                                                                            key={step.step_number}
+                                                                            stepNumber={step.step_number}
+                                                                            description={step.description}
+                                                                            status={step.status}
+                                                                            durationMs={step.duration_ms}
+                                                                            details={step.details}
+                                                                            error={step.error}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            </motion.div>
                                                         ))}
                                                     </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </ConfigCard>
-                        </div>
-                    </TabsContent>
-
-                    {/* Playwright Tab */}
-                    <TabsContent value="playwright" className="mt-8">
-                        <div className="grid gap-8 lg:grid-cols-2">
-                            {/* Configuration */}
-                            <ConfigCard
-                                icon={Monitor}
-                                title="Playwright Configuration"
-                                description="Configure browser automation for E2E testing"
-                            >
-                                {/* Status Badge */}
-                                {playwrightStatus && (
-                                    <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/50">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-2.5 h-2.5 rounded-full ${playwrightStatus.is_running ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground'}`} />
-                                            <span className="text-sm font-medium">Runner Status</span>
-                                        </div>
-                                        <Badge variant={playwrightStatus.is_running ? "default" : "secondary"}>
-                                            {playwrightStatus.is_running ? "Active" : "Idle"}
-                                        </Badge>
-                                    </div>
-                                )}
-
-                                {/* Browser Selection */}
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Browser</Label>
-                                    <Select
-                                        value={playwrightConfig.browser_type}
-                                        onValueChange={(value: "chromium" | "firefox" | "webkit") =>
-                                            setPlaywrightConfig({ ...playwrightConfig, browser_type: value })
-                                        }
-                                    >
-                                        <SelectTrigger className="h-10 rounded-lg border-border/50">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-card border-border/50 rounded-xl">
-                                            <SelectItem value="chromium">Chromium</SelectItem>
-                                            <SelectItem value="firefox">Firefox</SelectItem>
-                                            <SelectItem value="webkit">WebKit (Safari)</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* Viewport */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label className="text-sm font-medium">Width</Label>
-                                        <Input
-                                            type="number"
-                                            value={playwrightConfig.viewport.width}
-                                            onChange={(e) =>
-                                                setPlaywrightConfig({
-                                                    ...playwrightConfig,
-                                                    viewport: { ...playwrightConfig.viewport, width: parseInt(e.target.value) || 1280 },
-                                                })
-                                            }
-                                            className="h-10 rounded-lg border-border/50"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label className="text-sm font-medium">Height</Label>
-                                        <Input
-                                            type="number"
-                                            value={playwrightConfig.viewport.height}
-                                            onChange={(e) =>
-                                                setPlaywrightConfig({
-                                                    ...playwrightConfig,
-                                                    viewport: { ...playwrightConfig.viewport, height: parseInt(e.target.value) || 720 },
-                                                })
-                                            }
-                                            className="h-10 rounded-lg border-border/50"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Base URL & Timeout */}
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Base URL</Label>
-                                    <Input
-                                        value={playwrightConfig.base_url}
-                                        onChange={(e) => setPlaywrightConfig({ ...playwrightConfig, base_url: e.target.value })}
-                                        placeholder="http://localhost:3000"
-                                        className="h-10 rounded-lg border-border/50 font-mono text-sm"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Timeout (ms)</Label>
-                                    <Input
-                                        type="number"
-                                        value={playwrightConfig.timeout}
-                                        onChange={(e) =>
-                                            setPlaywrightConfig({ ...playwrightConfig, timeout: parseInt(e.target.value) || 30000 })
-                                        }
-                                        className="h-10 rounded-lg border-border/50"
-                                    />
-                                </div>
-
-                                {/* Environment */}
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">Environment</Label>
-                                    <Select
-                                        value={playwrightConfig.environment}
-                                        onValueChange={(value) => setPlaywrightConfig({ ...playwrightConfig, environment: value })}
-                                    >
-                                        <SelectTrigger className="h-10 rounded-lg border-border/50">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-card border-border/50 rounded-xl">
-                                            <SelectItem value="development">Development</SelectItem>
-                                            <SelectItem value="staging">Staging</SelectItem>
-                                            <SelectItem value="production">Production</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {/* Toggle Options */}
-                                <div className="space-y-2 pt-4 border-t border-border/50">
-                                    <ToggleOption
-                                        id="headless"
-                                        label="Headless Mode"
-                                        description="Run without visible browser window"
-                                        checked={playwrightConfig.headless}
-                                        onCheckedChange={(checked) => setPlaywrightConfig({ ...playwrightConfig, headless: checked })}
-                                        icon={playwrightConfig.headless ? EyeOff : Eye}
-                                    />
-                                    <ToggleOption
-                                        id="trace"
-                                        label="Record Trace"
-                                        description="Capture detailed execution trace"
-                                        checked={playwrightConfig.record_trace}
-                                        onCheckedChange={(checked) => setPlaywrightConfig({ ...playwrightConfig, record_trace: checked })}
-                                        icon={FileDown}
-                                    />
-                                    <ToggleOption
-                                        id="video"
-                                        label="Record Video"
-                                        description="Capture video of test execution"
-                                        checked={playwrightConfig.record_video}
-                                        onCheckedChange={(checked) => setPlaywrightConfig({ ...playwrightConfig, record_video: checked })}
-                                        icon={Film}
-                                    />
-                                    <ToggleOption
-                                        id="screenshot"
-                                        label="Screenshot on Failure"
-                                        description="Capture screenshot when test fails"
-                                        checked={playwrightConfig.screenshot_on_failure}
-                                        onCheckedChange={(checked) => setPlaywrightConfig({ ...playwrightConfig, screenshot_on_failure: checked })}
-                                        icon={Image}
-                                    />
-                                </div>
-
-                                {/* Test Case Selection */}
-                                <div className="pt-4 border-t border-border/50 space-y-4">
-                                    <Label className="text-base font-semibold">Select Test Case</Label>
-                                    <TestCaseSelector
-                                        projects={projects}
-                                        requirements={requirements}
-                                        testCases={testCases}
-                                        selectedProjectId={selectedProjectId}
-                                        selectedRequirementId={selectedRequirementId}
-                                        selectedTestCaseId={selectedTestCaseId}
-                                        onProjectChange={setSelectedProjectId}
-                                        onRequirementChange={setSelectedRequirementId}
-                                        onTestCaseChange={setSelectedTestCaseId}
-                                        compact
-                                    />
-                                </div>
-
-                                {/* Execute Button */}
-                                <div className="flex gap-3 pt-4">
-                                    <Button
-                                        onClick={executeWithPlaywright}
-                                        disabled={isPlaywrightRunning || !selectedTestCaseId}
-                                        className="flex-1 h-11 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-xl"
-                                    >
-                                        {isPlaywrightRunning ? (
-                                            <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Running...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Play className="mr-2 h-4 w-4" />
-                                                Execute Test
-                                            </>
-                                        )}
-                                    </Button>
-                                    {isPlaywrightRunning && (
-                                        <Button variant="destructive" onClick={stopExecution} className="h-11 px-4 rounded-xl">
-                                            <StopCircle className="h-4 w-4" />
-                                        </Button>
-                                    )}
-                                </div>
-                            </ConfigCard>
-
-                            {/* Results */}
-                            <ConfigCard
-                                icon={Monitor}
-                                title="Execution Results"
-                                description="Browser automation results with traces and screenshots"
-                            >
-                                {isPlaywrightRunning && (
-                                    <LoadingState
-                                        icon={Monitor}
-                                        message="Running browser automation..."
-                                        subMessage="Executing test steps in the browser"
-                                    />
-                                )}
-
-                                {!isPlaywrightRunning && !playwrightResult && (
-                                    <EmptyState
-                                        icon={Monitor}
-                                        title="No results yet"
-                                        description="Select a test case and click Execute to run browser automation"
-                                    />
-                                )}
-
-                                {playwrightResult && (
-                                    <div className="space-y-6">
-                                        {/* Status Header */}
-                                        <div className={`flex items-center justify-between p-5 rounded-xl border ${
-                                            playwrightResult.status === "passed"
-                                                ? "bg-emerald-500/5 border-emerald-500/20"
-                                                : "bg-rose-500/5 border-rose-500/20"
-                                        }`}>
-                                            <div className="flex items-center gap-4">
-                                                <div className={`p-3 rounded-xl ${
-                                                    playwrightResult.status === "passed"
-                                                        ? "bg-emerald-500/20"
-                                                        : "bg-rose-500/20"
-                                                }`}>
-                                                    {playwrightResult.status === "passed" ? (
-                                                        <Play className="h-6 w-6 text-emerald-500" />
-                                                    ) : (
-                                                        <StopCircle className="h-6 w-6 text-rose-500" />
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div className={`font-semibold text-lg ${
-                                                        playwrightResult.status === "passed" ? "text-emerald-600" : "text-rose-600"
-                                                    }`}>
-                                                        {playwrightResult.status === "passed" ? "Test Passed" : "Test Failed"}
-                                                    </div>
-                                                    <div className="text-sm text-muted-foreground">
-                                                        Execution #{playwrightResult.execution_id}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <Badge variant="outline" className="text-xs">
-                                                {playwrightResult.browser_type}
-                                            </Badge>
-                                        </div>
-
-                                        {/* Metrics */}
-                                        <div className="grid grid-cols-3 gap-3">
-                                            <div className="p-4 rounded-xl bg-muted/30 border border-border/50 text-center">
-                                                <div className="text-xl font-bold text-foreground">
-                                                    {(playwrightResult.duration_ms / 1000).toFixed(1)}s
-                                                </div>
-                                                <div className="text-xs text-muted-foreground mt-1">Duration</div>
-                                            </div>
-                                            <div className="p-4 rounded-xl bg-muted/30 border border-border/50 text-center">
-                                                <div className="text-xl font-bold text-foreground">
-                                                    {playwrightResult.steps.length}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground mt-1">Steps</div>
-                                            </div>
-                                            <div className="p-4 rounded-xl bg-muted/30 border border-border/50 text-center">
-                                                <div className="text-xl font-bold text-foreground">
-                                                    {playwrightResult.network_logs_count}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground mt-1">Requests</div>
-                                            </div>
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex gap-2 flex-wrap">
-                                            {playwrightResult.trace_path && (
-                                                <Button variant="outline" size="sm" onClick={downloadTrace} className="rounded-lg">
-                                                    <FileDown className="mr-2 h-4 w-4" />
-                                                    Download Trace
-                                                </Button>
+                                                </motion.div>
                                             )}
-                                            {playwrightResult.screenshot_path && (
-                                                <Button variant="outline" size="sm" onClick={downloadScreenshot} className="rounded-lg">
-                                                    <Camera className="mr-2 h-4 w-4" />
-                                                    View Screenshot
-                                                </Button>
-                                            )}
-                                            <Button variant="outline" size="sm" onClick={fetchPlaywrightStatus} className="rounded-lg">
-                                                <RefreshCw className="mr-2 h-4 w-4" />
-                                                Refresh
-                                            </Button>
+                                        </AnimatePresence>
+                                    </ConfigCard>
+                                </motion.div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {activeTab === "playwright" && (
+                        <motion.div
+                            key="playwright"
+                            variants={tabContentVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            className="mt-8"
+                        >
+                            <div className="grid gap-8 lg:grid-cols-2">
+                                {/* Configuration */}
+                                <motion.div variants={cardVariants}>
+                                    <ConfigCard
+                                        icon={Monitor}
+                                        title="Playwright Configuration"
+                                        description="Configure browser automation for E2E testing"
+                                    >
+                                        {/* Status Badge */}
+                                        {playwrightStatus && (
+                                            <motion.div 
+                                                className="flex items-center justify-between p-4 rounded-xl bg-muted/30 border border-border/50"
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <motion.div 
+                                                        className={`w-2.5 h-2.5 rounded-full ${playwrightStatus.is_running ? 'bg-emerald-500' : 'bg-muted-foreground'}`}
+                                                        animate={playwrightStatus.is_running ? { scale: [1, 1.2, 1] } : {}}
+                                                        transition={{ duration: 1, repeat: Infinity }}
+                                                    />
+                                                    <span className="text-sm font-medium">Runner Status</span>
+                                                </div>
+                                                <Badge variant={playwrightStatus.is_running ? "default" : "secondary"}>
+                                                    {playwrightStatus.is_running ? "Active" : "Idle"}
+                                                </Badge>
+                                            </motion.div>
+                                        )}
+
+                                        {/* Browser Selection */}
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium">Browser</Label>
+                                            <Select
+                                                value={playwrightConfig.browser_type}
+                                                onValueChange={(value: "chromium" | "firefox" | "webkit") =>
+                                                    setPlaywrightConfig({ ...playwrightConfig, browser_type: value })
+                                                }
+                                            >
+                                                <SelectTrigger className="h-10 rounded-lg border-border/50">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-card border-border/50 rounded-xl">
+                                                    <SelectItem value="chromium">Chromium</SelectItem>
+                                                    <SelectItem value="firefox">Firefox</SelectItem>
+                                                    <SelectItem value="webkit">WebKit (Safari)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                         </div>
 
-                                        {/* Error */}
-                                        {playwrightResult.error_message && (
-                                            <div className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20">
-                                                <div className="text-sm font-medium text-rose-600">Error</div>
-                                                <div className="text-sm text-rose-500 mt-1 font-mono">
-                                                    {playwrightResult.error_message}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Defect */}
-                                        {playwrightResult.defect_id && (
-                                            <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20">
-                                                <div className="text-sm font-medium text-amber-600">
-                                                    Defect Created: DEF-{playwrightResult.defect_id}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Steps */}
-                                        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                                            <Label className="text-sm font-medium">Execution Steps</Label>
-                                            {playwrightResult.steps.map((step) => (
-                                                <StepResult
-                                                    key={step.step_number}
-                                                    stepNumber={step.step_number}
-                                                    description={step.description}
-                                                    status={step.status}
-                                                    durationMs={step.duration_ms}
-                                                    actionType={step.action_type}
-                                                    selector={step.selector || undefined}
-                                                    error={step.error}
+                                        {/* Viewport */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label className="text-sm font-medium">Width</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={playwrightConfig.viewport.width}
+                                                    onChange={(e) =>
+                                                        setPlaywrightConfig({
+                                                            ...playwrightConfig,
+                                                            viewport: { ...playwrightConfig.viewport, width: parseInt(e.target.value) || 1280 },
+                                                        })
+                                                    }
+                                                    className="h-10 rounded-lg border-border/50"
                                                 />
-                                            ))}
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-sm font-medium">Height</Label>
+                                                <Input
+                                                    type="number"
+                                                    value={playwrightConfig.viewport.height}
+                                                    onChange={(e) =>
+                                                        setPlaywrightConfig({
+                                                            ...playwrightConfig,
+                                                            viewport: { ...playwrightConfig.viewport, height: parseInt(e.target.value) || 720 },
+                                                        })
+                                                    }
+                                                    className="h-10 rounded-lg border-border/50"
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                            </ConfigCard>
-                        </div>
-                    </TabsContent>
-                </Tabs>
+
+                                        {/* Base URL & Timeout */}
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium">Base URL</Label>
+                                            <Input
+                                                value={playwrightConfig.base_url}
+                                                onChange={(e) => setPlaywrightConfig({ ...playwrightConfig, base_url: e.target.value })}
+                                                placeholder="http://localhost:3000"
+                                                className="h-10 rounded-lg border-border/50 font-mono text-sm"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium">Timeout (ms)</Label>
+                                            <Input
+                                                type="number"
+                                                value={playwrightConfig.timeout}
+                                                onChange={(e) =>
+                                                    setPlaywrightConfig({ ...playwrightConfig, timeout: parseInt(e.target.value) || 30000 })
+                                                }
+                                                className="h-10 rounded-lg border-border/50"
+                                            />
+                                        </div>
+
+                                        {/* Environment */}
+                                        <div className="space-y-2">
+                                            <Label className="text-sm font-medium">Environment</Label>
+                                            <Select
+                                                value={playwrightConfig.environment}
+                                                onValueChange={(value) => setPlaywrightConfig({ ...playwrightConfig, environment: value })}
+                                            >
+                                                <SelectTrigger className="h-10 rounded-lg border-border/50">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-card border-border/50 rounded-xl">
+                                                    <SelectItem value="development">Development</SelectItem>
+                                                    <SelectItem value="staging">Staging</SelectItem>
+                                                    <SelectItem value="production">Production</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Toggle Options */}
+                                        <div className="space-y-2 pt-4 border-t border-border/50">
+                                            <ToggleOption
+                                                id="headless"
+                                                label="Headless Mode"
+                                                description="Run without visible browser window"
+                                                checked={playwrightConfig.headless}
+                                                onCheckedChange={(checked) => setPlaywrightConfig({ ...playwrightConfig, headless: checked })}
+                                                icon={playwrightConfig.headless ? EyeOff : Eye}
+                                            />
+                                            <ToggleOption
+                                                id="trace"
+                                                label="Record Trace"
+                                                description="Capture detailed execution trace"
+                                                checked={playwrightConfig.record_trace}
+                                                onCheckedChange={(checked) => setPlaywrightConfig({ ...playwrightConfig, record_trace: checked })}
+                                                icon={FileDown}
+                                            />
+                                            <ToggleOption
+                                                id="video"
+                                                label="Record Video"
+                                                description="Capture video of test execution"
+                                                checked={playwrightConfig.record_video}
+                                                onCheckedChange={(checked) => setPlaywrightConfig({ ...playwrightConfig, record_video: checked })}
+                                                icon={Film}
+                                            />
+                                            <ToggleOption
+                                                id="screenshot"
+                                                label="Screenshot on Failure"
+                                                description="Capture screenshot when test fails"
+                                                checked={playwrightConfig.screenshot_on_failure}
+                                                onCheckedChange={(checked) => setPlaywrightConfig({ ...playwrightConfig, screenshot_on_failure: checked })}
+                                                icon={Image}
+                                            />
+                                        </div>
+
+                                        {/* Test Case Selection */}
+                                        <div className="pt-4 border-t border-border/50 space-y-4">
+                                            <Label className="text-base font-semibold">Select Test Case</Label>
+                                            <TestCaseSelector
+                                                projects={projects}
+                                                requirements={requirements}
+                                                testCases={testCases}
+                                                selectedProjectId={selectedProjectId}
+                                                selectedRequirementId={selectedRequirementId}
+                                                selectedTestCaseId={selectedTestCaseId}
+                                                onProjectChange={setSelectedProjectId}
+                                                onRequirementChange={setSelectedRequirementId}
+                                                onTestCaseChange={setSelectedTestCaseId}
+                                                compact
+                                            />
+                                        </div>
+
+                                        {/* Execute Button */}
+                                        <div className="flex gap-3 pt-4">
+                                            <motion.div className="flex-1" whileTap={{ scale: 0.98 }}>
+                                                <Button
+                                                    onClick={executeWithPlaywright}
+                                                    disabled={isPlaywrightRunning || !selectedTestCaseId}
+                                                    className="w-full h-11 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-xl"
+                                                >
+                                                    {isPlaywrightRunning ? (
+                                                        <>
+                                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                            Running...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Play className="mr-2 h-4 w-4" />
+                                                            Execute Test
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </motion.div>
+                                            <AnimatePresence>
+                                                {isPlaywrightRunning && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, scale: 0.8 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        exit={{ opacity: 0, scale: 0.8 }}
+                                                    >
+                                                        <Button variant="destructive" onClick={stopExecution} className="h-11 px-4 rounded-xl">
+                                                            <StopCircle className="h-4 w-4" />
+                                                        </Button>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    </ConfigCard>
+                                </motion.div>
+
+                                {/* Results */}
+                                <motion.div variants={cardVariants}>
+                                    <ConfigCard
+                                        icon={Monitor}
+                                        title="Execution Results"
+                                        description="Browser automation results with traces and screenshots"
+                                    >
+                                        <AnimatePresence mode="wait">
+                                            {isPlaywrightRunning && (
+                                                <motion.div
+                                                    key="loading"
+                                                    initial={{ opacity: 0, scale: 0.9 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.9 }}
+                                                >
+                                                    <LoadingState
+                                                        icon={Monitor}
+                                                        message="Running browser automation..."
+                                                        subMessage="Executing test steps in the browser"
+                                                    />
+                                                </motion.div>
+                                            )}
+
+                                            {!isPlaywrightRunning && !playwrightResult && (
+                                                <motion.div
+                                                    key="empty"
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    exit={{ opacity: 0 }}
+                                                >
+                                                    <EmptyState
+                                                        icon={Monitor}
+                                                        title="No results yet"
+                                                        description="Select a test case and click Execute to run browser automation"
+                                                    />
+                                                </motion.div>
+                                            )}
+
+                                            {playwrightResult && (
+                                                <motion.div
+                                                    key="results"
+                                                    variants={resultsVariants}
+                                                    initial="hidden"
+                                                    animate="visible"
+                                                    className="space-y-6"
+                                                >
+                                                    {/* Status Header */}
+                                                    <motion.div 
+                                                        variants={itemVariants}
+                                                        className={`flex items-center justify-between p-5 rounded-xl border ${
+                                                            playwrightResult.status === "passed"
+                                                                ? "bg-emerald-500/5 border-emerald-500/20"
+                                                                : "bg-rose-500/5 border-rose-500/20"
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center gap-4">
+                                                            <motion.div 
+                                                                className={`p-3 rounded-xl ${
+                                                                    playwrightResult.status === "passed"
+                                                                        ? "bg-emerald-500/20"
+                                                                        : "bg-rose-500/20"
+                                                                }`}
+                                                                initial={{ scale: 0 }}
+                                                                animate={{ scale: 1 }}
+                                                                transition={{ type: "spring", stiffness: 500, delay: 0.2 }}
+                                                            >
+                                                                {playwrightResult.status === "passed" ? (
+                                                                    <Play className="h-6 w-6 text-emerald-500" />
+                                                                ) : (
+                                                                    <StopCircle className="h-6 w-6 text-rose-500" />
+                                                                )}
+                                                            </motion.div>
+                                                            <div>
+                                                                <div className={`font-semibold text-lg ${
+                                                                    playwrightResult.status === "passed" ? "text-emerald-600" : "text-rose-600"
+                                                                }`}>
+                                                                    {playwrightResult.status === "passed" ? "Test Passed" : "Test Failed"}
+                                                                </div>
+                                                                <div className="text-sm text-muted-foreground">
+                                                                    Execution #{playwrightResult.execution_id}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {playwrightResult.browser_type}
+                                                        </Badge>
+                                                    </motion.div>
+
+                                                    {/* Metrics */}
+                                                    <motion.div 
+                                                        className="grid grid-cols-3 gap-3"
+                                                        variants={itemVariants}
+                                                    >
+                                                        {[
+                                                            { value: `${(playwrightResult.duration_ms / 1000).toFixed(1)}s`, label: "Duration" },
+                                                            { value: playwrightResult.steps.length, label: "Steps" },
+                                                            { value: playwrightResult.network_logs_count, label: "Requests" }
+                                                        ].map((metric, idx) => (
+                                                            <motion.div 
+                                                                key={idx}
+                                                                className="p-4 rounded-xl bg-muted/30 border border-border/50 text-center"
+                                                                whileHover={{ scale: 1.05 }}
+                                                                transition={{ type: "spring", stiffness: 400 }}
+                                                            >
+                                                                <div className="text-xl font-bold text-foreground">{metric.value}</div>
+                                                                <div className="text-xs text-muted-foreground mt-1">{metric.label}</div>
+                                                            </motion.div>
+                                                        ))}
+                                                    </motion.div>
+
+                                                    {/* Actions */}
+                                                    <motion.div className="flex gap-2 flex-wrap" variants={itemVariants}>
+                                                        {playwrightResult.trace_path && (
+                                                            <Button variant="outline" size="sm" onClick={downloadTrace} className="rounded-lg">
+                                                                <FileDown className="mr-2 h-4 w-4" />
+                                                                Download Trace
+                                                            </Button>
+                                                        )}
+                                                        {playwrightResult.screenshot_path && (
+                                                            <Button variant="outline" size="sm" onClick={downloadScreenshot} className="rounded-lg">
+                                                                <Camera className="mr-2 h-4 w-4" />
+                                                                View Screenshot
+                                                            </Button>
+                                                        )}
+                                                        <Button variant="outline" size="sm" onClick={fetchPlaywrightStatus} className="rounded-lg">
+                                                            <RefreshCw className="mr-2 h-4 w-4" />
+                                                            Refresh
+                                                        </Button>
+                                                    </motion.div>
+
+                                                    {/* Error */}
+                                                    <AnimatePresence>
+                                                        {playwrightResult.error_message && (
+                                                            <motion.div 
+                                                                className="p-4 rounded-xl bg-rose-500/5 border border-rose-500/20"
+                                                                initial={{ opacity: 0, height: 0 }}
+                                                                animate={{ opacity: 1, height: "auto" }}
+                                                                exit={{ opacity: 0, height: 0 }}
+                                                            >
+                                                                <div className="text-sm font-medium text-rose-600">Error</div>
+                                                                <div className="text-sm text-rose-500 mt-1 font-mono">
+                                                                    {playwrightResult.error_message}
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+
+                                                    {/* Defect */}
+                                                    <AnimatePresence>
+                                                        {playwrightResult.defect_id && (
+                                                            <motion.div 
+                                                                className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20"
+                                                                initial={{ opacity: 0, y: 10 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                            >
+                                                                <div className="text-sm font-medium text-amber-600">
+                                                                    Defect Created: DEF-{playwrightResult.defect_id}
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+
+                                                    {/* Steps */}
+                                                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                                                        <Label className="text-sm font-medium">Execution Steps</Label>
+                                                        {playwrightResult.steps.map((step, idx) => (
+                                                            <motion.div
+                                                                key={step.step_number}
+                                                                initial={{ opacity: 0, x: -20 }}
+                                                                animate={{ opacity: 1, x: 0 }}
+                                                                transition={{ delay: idx * 0.05 }}
+                                                            >
+                                                                <StepResult
+                                                                    stepNumber={step.step_number}
+                                                                    description={step.description}
+                                                                    status={step.status}
+                                                                    durationMs={step.duration_ms}
+                                                                    actionType={step.action_type}
+                                                                    selector={step.selector || undefined}
+                                                                    error={step.error}
+                                                                />
+                                                            </motion.div>
+                                                        ))}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </ConfigCard>
+                                </motion.div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         </DashboardLayout>
     );
