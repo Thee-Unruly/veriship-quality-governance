@@ -1010,7 +1010,433 @@ export default function TestRunner() {
                                 </CardContent>
                             </Card>
                         </div>
-                    </div>
-                </DashboardLayout>
-                );
+                    </TabsContent>
+
+                    {/* Playwright Automation Tab Content */}
+                    <TabsContent value="playwright" className="mt-6">
+                        <div className="grid gap-6 lg:grid-cols-2">
+                            {/* Playwright Configuration */}
+                            <Card className="border-2">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Settings2 className="h-5 w-5" />
+                                        Playwright Configuration
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Configure browser automation settings for test execution
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    {/* Runner Status */}
+                                    {playwrightStatus && (
+                                        <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm font-medium">Runner Status</span>
+                                                <Badge variant={playwrightStatus.is_running ? "default" : "secondary"}>
+                                                    {playwrightStatus.is_running ? "Running" : "Stopped"}
+                                                </Badge>
+                                            </div>
+                                            {playwrightStatus.is_running && (
+                                                <>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Browser: {playwrightStatus.browser_type}
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        Active Contexts: {playwrightStatus.contexts_count}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Browser Type */}
+                                    <div className="space-y-2">
+                                        <Label>Browser Type</Label>
+                                        <Select
+                                            value={playwrightConfig.browser_type}
+                                            onValueChange={(value: "chromium" | "firefox" | "webkit") =>
+                                                setPlaywrightConfig({ ...playwrightConfig, browser_type: value })
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="chromium">Chromium</SelectItem>
+                                                <SelectItem value="firefox">Firefox</SelectItem>
+                                                <SelectItem value="webkit">WebKit (Safari)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Viewport */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Viewport Width</Label>
+                                            <Input
+                                                type="number"
+                                                value={playwrightConfig.viewport.width}
+                                                onChange={(e) =>
+                                                    setPlaywrightConfig({
+                                                        ...playwrightConfig,
+                                                        viewport: { ...playwrightConfig.viewport, width: parseInt(e.target.value) },
+                                                    })
+                                                }
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Viewport Height</Label>
+                                            <Input
+                                                type="number"
+                                                value={playwrightConfig.viewport.height}
+                                                onChange={(e) =>
+                                                    setPlaywrightConfig({
+                                                        ...playwrightConfig,
+                                                        viewport: { ...playwrightConfig.viewport, height: parseInt(e.target.value) },
+                                                    })
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Base URL */}
+                                    <div className="space-y-2">
+                                        <Label>Base URL</Label>
+                                        <Input
+                                            value={playwrightConfig.base_url}
+                                            onChange={(e) =>
+                                                setPlaywrightConfig({ ...playwrightConfig, base_url: e.target.value })
+                                            }
+                                            placeholder="http://localhost:3000"
+                                        />
+                                    </div>
+
+                                    {/* Timeout */}
+                                    <div className="space-y-2">
+                                        <Label>Timeout (ms)</Label>
+                                        <Input
+                                            type="number"
+                                            value={playwrightConfig.timeout}
+                                            onChange={(e) =>
+                                                setPlaywrightConfig({ ...playwrightConfig, timeout: parseInt(e.target.value) })
+                                            }
+                                        />
+                                    </div>
+
+                                    {/* Environment */}
+                                    <div className="space-y-2">
+                                        <Label>Environment</Label>
+                                        <Select
+                                            value={playwrightConfig.environment}
+                                            onValueChange={(value) =>
+                                                setPlaywrightConfig({ ...playwrightConfig, environment: value })
+                                            }
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="development">Development</SelectItem>
+                                                <SelectItem value="staging">Staging</SelectItem>
+                                                <SelectItem value="production">Production</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {/* Toggle Options */}
+                                    <div className="space-y-3 border-t pt-4">
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="headless" className="cursor-pointer">Headless Mode</Label>
+                                            <Switch
+                                                id="headless"
+                                                checked={playwrightConfig.headless}
+                                                onCheckedChange={(checked) =>
+                                                    setPlaywrightConfig({ ...playwrightConfig, headless: checked })
+                                                }
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="trace" className="cursor-pointer">Record Trace</Label>
+                                            <Switch
+                                                id="trace"
+                                                checked={playwrightConfig.record_trace}
+                                                onCheckedChange={(checked) =>
+                                                    setPlaywrightConfig({ ...playwrightConfig, record_trace: checked })
+                                                }
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="video" className="cursor-pointer">Record Video</Label>
+                                            <Switch
+                                                id="video"
+                                                checked={playwrightConfig.record_video}
+                                                onCheckedChange={(checked) =>
+                                                    setPlaywrightConfig({ ...playwrightConfig, record_video: checked })
+                                                }
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <Label htmlFor="screenshot" className="cursor-pointer">Screenshot on Failure</Label>
+                                            <Switch
+                                                id="screenshot"
+                                                checked={playwrightConfig.screenshot_on_failure}
+                                                onCheckedChange={(checked) =>
+                                                    setPlaywrightConfig({ ...playwrightConfig, screenshot_on_failure: checked })
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Test Case Selection */}
+                                    <div className="border-t pt-4 space-y-3">
+                                        <Label className="text-base font-semibold">Select Test Case</Label>
+                                        <div className="space-y-2">
+                                            <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select project..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {projects.map((p) => (
+                                                        <SelectItem key={p.id} value={p.id.toString()}>
+                                                            {p.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Select
+                                                value={selectedRequirementId}
+                                                onValueChange={setSelectedRequirementId}
+                                                disabled={!selectedProjectId}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select requirement..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {requirements.map((r) => (
+                                                        <SelectItem key={r.id} value={r.id.toString()}>
+                                                            {r.title}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Select
+                                                value={selectedTestCaseId}
+                                                onValueChange={setSelectedTestCaseId}
+                                                disabled={!selectedRequirementId}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select test case..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {testCases.map((tc) => (
+                                                        <SelectItem key={tc.id} value={tc.id.toString()}>
+                                                            {tc.title}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    {/* Execute Button */}
+                                    <div className="flex gap-2">
+                                        <Button
+                                            onClick={executeWithPlaywright}
+                                            disabled={isPlaywrightRunning || !selectedTestCaseId}
+                                            className="flex-1 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700"
+                                        >
+                                            {isPlaywrightRunning ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Executing...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Play className="mr-2 h-4 w-4" />
+                                                    Execute with Playwright
+                                                </>
+                                            )}
+                                        </Button>
+                                        {isPlaywrightRunning && (
+                                            <Button variant="destructive" onClick={stopExecution}>
+                                                <StopCircle className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Playwright Results */}
+                            <Card className="border-2">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Monitor className="h-5 w-5" />
+                                        Playwright Execution Results
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Browser automation test results with traces and screenshots
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {isPlaywrightRunning && (
+                                        <div className="flex flex-col items-center justify-center py-12 space-y-4">
+                                            <div className="relative">
+                                                <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+                                                <Monitor className="h-6 w-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-500" />
+                                            </div>
+                                            <p className="text-sm text-muted-foreground">
+                                                Running browser automation...
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {!isPlaywrightRunning && !playwrightResult && (
+                                        <div className="flex flex-col items-center justify-center py-12 space-y-4 text-center">
+                                            <div className="rounded-full bg-muted p-4">
+                                                <Monitor className="h-8 w-8 text-muted-foreground" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium">No execution results</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Select a test case and click Execute to run browser automation
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {playwrightResult && (
+                                        <div className="space-y-6">
+                                            {/* Status Header */}
+                                            <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                                                <div className="flex items-center gap-3">
+                                                    {playwrightResult.status === "passed" ? (
+                                                        <CheckCircle2 className="h-8 w-8 text-green-500" />
+                                                    ) : (
+                                                        <XCircle className="h-8 w-8 text-red-500" />
+                                                    )}
+                                                    <div>
+                                                        <div className="font-semibold text-lg">
+                                                            {playwrightResult.status === "passed" ? "Test Passed" : "Test Failed"}
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground">
+                                                            Execution #{playwrightResult.execution_id}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <Badge
+                                                    variant="outline"
+                                                    className={
+                                                        playwrightResult.status === "passed"
+                                                            ? "bg-green-500/10 text-green-500 border-green-500/20"
+                                                            : "bg-red-500/10 text-red-500 border-red-500/20"
+                                                    }
+                                                >
+                                                    {playwrightResult.browser_type}
+                                                </Badge>
+                                            </div>
+
+                                            {/* Metrics */}
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <div className="text-center p-3 rounded-lg bg-muted">
+                                                    <div className="text-xl font-bold">{playwrightResult.duration_ms.toFixed(0)}ms</div>
+                                                    <div className="text-xs text-muted-foreground">Duration</div>
+                                                </div>
+                                                <div className="text-center p-3 rounded-lg bg-muted">
+                                                    <div className="text-xl font-bold">{playwrightResult.steps.length}</div>
+                                                    <div className="text-xs text-muted-foreground">Steps</div>
+                                                </div>
+                                                <div className="text-center p-3 rounded-lg bg-muted">
+                                                    <div className="text-xl font-bold">{playwrightResult.network_logs_count}</div>
+                                                    <div className="text-xs text-muted-foreground">Network Requests</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Action Buttons */}
+                                            <div className="flex gap-2 flex-wrap">
+                                                {playwrightResult.trace_path && (
+                                                    <Button variant="outline" size="sm" onClick={downloadTrace}>
+                                                        <FileDown className="mr-2 h-4 w-4" />
+                                                        Download Trace
+                                                    </Button>
+                                                )}
+                                                {playwrightResult.screenshot_path && (
+                                                    <Button variant="outline" size="sm" onClick={downloadScreenshot}>
+                                                        <Camera className="mr-2 h-4 w-4" />
+                                                        View Screenshot
+                                                    </Button>
+                                                )}
+                                                <Button variant="outline" size="sm" onClick={fetchPlaywrightStatus}>
+                                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                                    Refresh Status
+                                                </Button>
+                                            </div>
+
+                                            {/* Error Message */}
+                                            {playwrightResult.error_message && (
+                                                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                                                    <div className="text-sm font-medium text-red-500">Error</div>
+                                                    <div className="text-sm text-red-400 mt-1">
+                                                        {playwrightResult.error_message}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Defect Created */}
+                                            {playwrightResult.defect_id && (
+                                                <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                                                    <div className="text-sm font-medium text-yellow-600">
+                                                        Defect Created: DEF-{playwrightResult.defect_id}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Steps */}
+                                            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                                                <Label>Execution Steps</Label>
+                                                {playwrightResult.steps.map((step) => (
+                                                    <div
+                                                        key={step.step_number}
+                                                        className="flex items-start gap-2 text-sm p-3 rounded-md bg-muted/50 border"
+                                                    >
+                                                        <div className="flex-shrink-0 mt-0.5">
+                                                            {getStatusIcon(step.status)}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="font-medium">
+                                                                Step {step.step_number}: {step.action_type}
+                                                            </div>
+                                                            <div className="text-xs text-muted-foreground">
+                                                                {step.description}
+                                                            </div>
+                                                            {step.selector && (
+                                                                <div className="text-xs text-muted-foreground font-mono mt-1">
+                                                                    Selector: {step.selector}
+                                                                </div>
+                                                            )}
+                                                            {step.error && (
+                                                                <div className="text-xs text-red-500 mt-1">
+                                                                    {step.error}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground flex-shrink-0">
+                                                            {step.duration_ms.toFixed(0)}ms
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </TabsContent>
+                </Tabs>
+            </div>
+        </DashboardLayout>
+    );
 }
