@@ -14,3 +14,7 @@ celery==5.3.4
 requests==2.31.0
 cryptography==41.0.7
 PyJWT==2.10.1
+
+# Playwright Automation
+playwright==1.40.0
+aiofiles==23.2.1

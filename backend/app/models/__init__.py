@@ -481,3 +481,47 @@ class TeamMember(Base):
 
     # Relationships
     project = relationship("Project", back_populates="team_members")
+
+
+# ========== Playwright Automation ==========
+
+class ExecutionStepStatus(str, PyEnum):
+    """Execution step status."""
+    PASSED = "passed"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+    PENDING = "pending"
+
+
+class ExecutionStep(Base):
+    """Individual step within a test execution.
+    
+    Captures detailed information about each action performed
+    during automated test execution.
+    """
+    __tablename__ = "execution_steps"
+
+    id = Column(Integer, primary_key=True, index=True)
+    execution_id = Column(Integer, ForeignKey("test_executions.id"), nullable=False, index=True)
+    
+    step_number = Column(Integer, nullable=False)
+    action_type = Column(String(50), nullable=False)  # click, fill, navigate, etc.
+    description = Column(String(500))
+    selector = Column(String(500))  # CSS selector used
+    value = Column(Text)  # Value passed to action (e.g., text to fill)
+    
+    status = Column(Enum(ExecutionStepStatus), default=ExecutionStepStatus.PENDING)
+    duration_ms = Column(Float, default=0.0)
+    
+    error = Column(Text)  # Error message if failed
+    screenshot_path = Column(String(500))  # Path to step screenshot
+    
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    execution = relationship("TestExecution", back_populates="steps")
+
+
+# Add steps relationship to TestExecution
+TestExecution.steps = relationship("ExecutionStep", back_populates="execution", cascade="all, delete-orphan")

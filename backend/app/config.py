@@ -43,6 +43,16 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-key-change-in-production"
     algorithm: str = "HS256"
     
+    # Playwright Automation Configuration
+    playwright_headless: bool = True
+    playwright_slow_mo: int = 0
+    playwright_timeout: int = 30000
+    traces_dir: str = "./traces"
+    screenshots_dir: str = "./screenshots"
+    videos_dir: str = "./videos"
+    max_concurrent_executions: int = 5
+    browser_types: List[str] = ["chromium", "firefox", "webkit"]
+    
     class Config:
         env_file = ".env"
         case_sensitive = False
