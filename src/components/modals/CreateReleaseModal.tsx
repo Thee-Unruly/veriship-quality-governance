@@ -7,7 +7,7 @@ import { useCrud } from "@/hooks/use-crud";
 interface CreateReleaseModalProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
-    projectId: number;
+    projectId: number | "";
     onSuccess: () => void;
 }
 
