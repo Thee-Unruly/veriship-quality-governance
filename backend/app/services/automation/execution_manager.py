@@ -249,7 +249,7 @@ class ExecutionManager:
         self,
         db: Session,
         runner: Optional[PlaywrightRunner] = None,
-        max_concurrent: int = None,
+        max_concurrent: Optional[int] = None,
     ):
         """Initialize ExecutionManager.
         
