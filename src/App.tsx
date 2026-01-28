@@ -13,6 +13,7 @@ import Defects from "./pages/Defects";
 import Releases from "./pages/Releases";
 import TestRunner from "./pages/TestRunner";
 import Playwright from "./pages/Playwright";
+import LoadTesting from "./pages/LoadTesting";
 // Analytics, Compliance, and Team pages removed
 import Settings from "./pages/Settings";
 import CopilotGuide from "./pages/CopilotGuide";
@@ -68,6 +69,7 @@ const App = () => {
             <Route path="/test-cases" element={<ProtectedRoute element={<TestCases />} />} />
             <Route path="/test-runner" element={<ProtectedRoute element={<TestRunner />} />} />
             <Route path="/playwright" element={<ProtectedRoute element={<Playwright />} />} />
+            <Route path="/load-testing" element={<ProtectedRoute element={<LoadTesting />} />} />
             <Route path="/defects" element={<ProtectedRoute element={<Defects />} />} />
             <Route path="/releases" element={<ProtectedRoute element={<Releases />} />} />
             {/* Analytics, Compliance, and Team routes removed */}
