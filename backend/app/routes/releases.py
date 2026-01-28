@@ -2,8 +2,9 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.database import get_db
-from app.models import Release, ReleaseStatus, ReleaseApproval, TeamMember, ApprovalStatus
+from app.models import Release, ReleaseStatus, ReleaseApproval, TeamMember, ApprovalStatus, TestCase
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
@@ -59,6 +60,30 @@ def list_all_releases(db: Session = Depends(get_db)):
 @router.post("/", response_model=ReleaseResponse)
 def create_release(release: ReleaseCreate, db: Session = Depends(get_db)):
     """Create a new release."""
+    # Check if project has at least 80% test completion
+    total_tests = db.query(func.count(TestCase.id)).filter(
+        TestCase.project_id == release.project_id
+    ).scalar() or 0
+    
+    completed_tests = db.query(func.count(TestCase.id)).filter(
+        TestCase.project_id == release.project_id,
+        TestCase.status == "completed"
+    ).scalar() or 0
+    
+    if total_tests == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot create release: No test cases found for this project. Add test cases first."
+        )
+    
+    completion_percentage = (completed_tests / total_tests) * 100
+    
+    if completion_percentage < 80:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot create release: Only {completion_percentage:.1f}% of tests are completed. Minimum 80% required."
+        )
+    
     # Auto-generate release_id if not provided
     release_id = release.release_id
     if not release_id:
@@ -83,13 +108,23 @@ def create_release(release: ReleaseCreate, db: Session = Depends(get_db)):
     db.add(db_release)
     db.flush()  # Get the release ID before creating approvals
     
-    # Auto-create approval records from team members
-    team_members = db.query(TeamMember).filter(TeamMember.project_id == release.project_id).all()
+    # Auto-create approval records only for Project Managers
+    team_members = db.query(TeamMember).filter(
+        TeamMember.project_id == release.project_id,
+        TeamMember.role.ilike("%project manager%")
+    ).all()
+    
+    if not team_members:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot create release: No Project Manager found in team. Add a Project Manager first."
+        )
+    
     for member in team_members:
         approval = ReleaseApproval(
             release_id=db_release.id,
             approver_name=member.name,
-            approver_role=member.role or "Team Member",
+            approver_role=member.role,
             status=ApprovalStatus.PENDING
         )
         db.add(approval)

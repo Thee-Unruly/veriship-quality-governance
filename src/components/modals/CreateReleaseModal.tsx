@@ -2,7 +2,9 @@ import { useState } from "react";
 import { FormModal } from "@/components/ui/form-modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useCrud } from "@/hooks/use-crud";
+import { AlertCircle } from "lucide-react";
 
 interface CreateReleaseModalProps {
     isOpen: boolean;
@@ -55,6 +57,18 @@ export function CreateReleaseModal({
             isLoading={loading}
         >
             <div className="space-y-4">
+                <Alert>
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                        <strong>Release Requirements:</strong>
+                        <ul className="mt-2 ml-4 list-disc text-sm">
+                            <li>At least 80% of test cases must be completed</li>
+                            <li>A Project Manager must be assigned to the project</li>
+                            <li>Only Project Managers can approve releases</li>
+                        </ul>
+                    </AlertDescription>
+                </Alert>
+
                 <div>
                     <Label htmlFor="version">Version *</Label>
                     <Input
