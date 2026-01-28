@@ -17,9 +17,10 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(255), unique=True, nullable=False, index=True)
+    username = Column(String(255), unique=True, nullable=True, index=True)
+    name = Column(String(255), nullable=False)  # Full name for display
     email = Column(String(255), unique=True, nullable=False, index=True)
-    password_hash = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=True)  # Nullable for invited users
     
     first_name = Column(String(255))
     last_name = Column(String(255))
@@ -525,3 +526,18 @@ class ExecutionStep(Base):
 
 # Add steps relationship to TestExecution
 TestExecution.steps = relationship("ExecutionStep", back_populates="execution", cascade="all, delete-orphan")
+
+
+# ========== Settings ==========
+
+class Setting(Base):
+    """Application settings stored as key-value pairs."""
+    __tablename__ = "settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String(255), unique=True, nullable=False, index=True)
+    value = Column(Text, nullable=False)
+    description = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
