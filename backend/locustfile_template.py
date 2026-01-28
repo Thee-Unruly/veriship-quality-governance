@@ -15,15 +15,5 @@ class LoadTestUser(HttpUser):
     # Base host URL (set dynamically)
     host = "{base_url}"
     
-    @task
-    def load_homepage(self):
-        """Load the homepage."""
-        self.client.get("/")
-    
-    @task(2)
-    def load_api_endpoint(self):
-        """Load a common API endpoint (weighted 2x)."""
-        self.client.get("/api/projects/")
-    
-    # Add custom endpoints here
+    # Custom endpoints (dynamically added)
 {custom_tasks}

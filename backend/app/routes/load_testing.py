@@ -37,13 +37,24 @@ def _generate_locustfile(
     
     # Generate custom tasks for each endpoint
     custom_tasks = ""
-    for i, endpoint in enumerate(endpoints, start=1):
-        task_name = endpoint.replace("/", "_").replace("-", "_").strip("_") or f"endpoint_{i}"
-        custom_tasks += f"""
+    if endpoints and any(e.strip() for e in endpoints):
+        for i, endpoint in enumerate(endpoints, start=1):
+            if not endpoint.strip():
+                continue
+            task_name = endpoint.replace("/", "_").replace("-", "_").strip("_") or f"endpoint_{i}"
+            custom_tasks += f"""
     @task
     def {task_name}(self):
         \"\"\"Test {endpoint}\"\"\"
         self.client.get("{endpoint}")
+"""
+    else:
+        # Default task if no endpoints provided
+        custom_tasks = """
+    @task
+    def load_homepage(self):
+        \"\"\"Load the homepage.\"\"\"
+        self.client.get("/")
 """
     
     # Read template
@@ -56,7 +67,7 @@ def _generate_locustfile(
         min_wait=min_wait,
         max_wait=max_wait,
         base_url=base_url,
-        custom_tasks=custom_tasks if custom_tasks else "    pass"
+        custom_tasks=custom_tasks
     )
     
     return locustfile_content
