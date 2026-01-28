@@ -39,7 +39,7 @@ app.add_middleware(
 )
 
 # Import routes
-from app.routes import projects, requirements, test_cases, defects, releases, metrics, auth, copilot, test_runs, trial, automation
+from app.routes import projects, requirements, test_cases, defects, releases, metrics, auth, copilot, test_runs, trial, automation, load_testing
 
 # Include routers
 app.include_router(auth.router)
@@ -53,6 +53,7 @@ app.include_router(copilot.router, prefix="/api/copilot", tags=["Copilot"])
 app.include_router(test_runs.router, prefix="/api/test-runs", tags=["Test Runs"])
 app.include_router(trial.router, prefix="/api/trial", tags=["Trial Runner"])
 app.include_router(automation.router, prefix="/api/automation", tags=["Playwright Automation"])
+app.include_router(load_testing.router, prefix="/api/load-testing", tags=["Load Testing"])
 
 
 @app.get("/health")
