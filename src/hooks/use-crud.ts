@@ -13,14 +13,21 @@ export function useCrud<T extends { id?: number }>(options: UseCrudOptions) {
     const create = async (data: Omit<T, "id">) => {
         setLoading(true);
         try {
-            const response = await fetch(`${baseUrl}`, {
+            const response = await fetch(`${baseUrl}/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data),
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+                let errorMessage = `HTTP ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData?.detail || errorMessage;
+                } catch {
+                    // If JSON parsing fails, use status code
+                }
+                throw new Error(errorMessage);
             }
 
             const result = await response.json();
@@ -28,7 +35,8 @@ export function useCrud<T extends { id?: number }>(options: UseCrudOptions) {
             onSuccess?.();
             return result;
         } catch (err) {
-            toast.error(`Error: ${err instanceof Error ? err.message : "Failed to create"}`);
+            const message = err instanceof Error ? err.message : "Failed to create";
+            toast.error(message);
             throw err;
         } finally {
             setLoading(false);

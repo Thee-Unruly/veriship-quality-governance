@@ -47,7 +47,7 @@ def _generate_locustfile(
 """
     
     # Read template
-    template_path = Path(__file__).parent.parent / "locustfile_template.py"
+    template_path = Path(__file__).parent.parent.parent / "locustfile_template.py"
     with open(template_path, "r") as f:
         template = f.read()
     
