@@ -71,7 +71,8 @@ def _run_locust_test(
     host: str
 ):
     """Run Locust load test in headless mode."""
-    loop = asyncio.get_event_loop()
+    import threading
+    
     queue = JOB_QUEUES.get(job_id)
     
     if queue is None:
@@ -94,10 +95,17 @@ def _run_locust_test(
         "--csv", str(report_dir / "stats"),
     ]
     
+    def put_message(msg: str):
+        """Thread-safe queue put."""
+        try:
+            asyncio.run(queue.put(msg))
+        except:
+            pass
+    
     try:
-        loop.call_soon_threadsafe(queue.put_nowait, f"🚀 Starting load test with {users} users...")
-        loop.call_soon_threadsafe(queue.put_nowait, f"📊 Target: {host}")
-        loop.call_soon_threadsafe(queue.put_nowait, f"⏱️  Duration: {run_time}")
+        put_message(f"🚀 Starting load test with {users} users...")
+        put_message(f"📊 Target: {host}")
+        put_message(f"⏱️  Duration: {run_time}")
         
         # Run Locust
         proc = subprocess.Popen(
@@ -110,26 +118,26 @@ def _run_locust_test(
         
         # Stream output
         for line in proc.stdout:
-            loop.call_soon_threadsafe(queue.put_nowait, line.rstrip())
+            put_message(line.rstrip())
         
         proc.wait()
         
         if proc.returncode == 0:
-            loop.call_soon_threadsafe(queue.put_nowait, "✅ Load test completed successfully!")
-            loop.call_soon_threadsafe(queue.put_nowait, f"📄 Report saved to: {report_dir / 'report.html'}")
+            put_message("✅ Load test completed successfully!")
+            put_message(f"📄 Report saved to: {report_dir / 'report.html'}")
             
             # Update job status
             LOAD_TEST_JOBS[job_id]["status"] = "completed"
             LOAD_TEST_JOBS[job_id]["report_path"] = str(report_dir / "report.html")
         else:
-            loop.call_soon_threadsafe(queue.put_nowait, f"❌ Load test failed with exit code {proc.returncode}")
+            put_message(f"❌ Load test failed with exit code {proc.returncode}")
             LOAD_TEST_JOBS[job_id]["status"] = "failed"
         
     except Exception as e:
-        loop.call_soon_threadsafe(queue.put_nowait, f"ERROR: {str(e)}")
+        put_message(f"ERROR: {str(e)}")
         LOAD_TEST_JOBS[job_id]["status"] = "failed"
     finally:
-        loop.call_soon_threadsafe(queue.put_nowait, "__DONE__")
+        put_message("__DONE__")
         
         # Cleanup locustfile
         try:
