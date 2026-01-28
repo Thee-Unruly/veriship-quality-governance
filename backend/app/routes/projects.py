@@ -11,6 +11,7 @@ from app.models import (
     CI_CDPipeline,
     ProductionIssue,
     QAInsight,
+    TeamMember,
 )
 from pydantic import BaseModel
 from datetime import datetime
@@ -44,6 +45,26 @@ class ProjectResponse(BaseModel):
     target_release_date: Optional[datetime]
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class TeamMemberCreate(BaseModel):
+    """Team member creation schema."""
+    name: str
+    email: Optional[str] = None
+    role: Optional[str] = "Member"  # QA Lead, QA Engineer, Dev, PM, etc.
+
+
+class TeamMemberResponse(BaseModel):
+    """Team member response schema."""
+    id: int
+    project_id: int
+    name: str
+    email: Optional[str]
+    role: Optional[str]
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -133,3 +154,83 @@ def delete_project(project_id: int, db: Session = Depends(get_db)):
             pass
         db.rollback()
         raise HTTPException(status_code=500, detail="Server error, check backend/delete_error.log")
+
+
+# ========== Team Member Endpoints ==========
+
+@router.get("/{project_id}/team", response_model=List[TeamMemberResponse])
+def get_project_team(project_id: int, db: Session = Depends(get_db)):
+    """Get all team members for a project."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    team_members = db.query(TeamMember).filter(TeamMember.project_id == project_id).all()
+    return team_members
+
+
+@router.post("/{project_id}/team", response_model=TeamMemberResponse)
+def add_team_member(
+    project_id: int,
+    member: TeamMemberCreate,
+    db: Session = Depends(get_db)
+):
+    """Add a team member to a project."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    db_member = TeamMember(
+        project_id=project_id,
+        name=member.name,
+        email=member.email,
+        role=member.role
+    )
+    db.add(db_member)
+    db.commit()
+    db.refresh(db_member)
+    return db_member
+
+
+@router.put("/{project_id}/team/{member_id}", response_model=TeamMemberResponse)
+def update_team_member(
+    project_id: int,
+    member_id: int,
+    member_update: TeamMemberCreate,
+    db: Session = Depends(get_db)
+):
+    """Update a team member."""
+    member = db.query(TeamMember).filter(
+        TeamMember.id == member_id,
+        TeamMember.project_id == project_id
+    ).first()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    
+    if member_update.name:
+        member.name = member_update.name
+    if member_update.email:
+        member.email = member_update.email
+    if member_update.role:
+        member.role = member_update.role
+    
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+@router.delete("/{project_id}/team/{member_id}")
+def remove_team_member(project_id: int, member_id: int, db: Session = Depends(get_db)):
+    """Remove a team member from a project."""
+    member = db.query(TeamMember).filter(
+        TeamMember.id == member_id,
+        TeamMember.project_id == project_id
+    ).first()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    
+    db.delete(member)
+    db.commit()
+    return {"status": "deleted"}
