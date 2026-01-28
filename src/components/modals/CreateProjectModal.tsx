@@ -86,13 +86,20 @@ export function CreateProjectModal({
 
             for (const member of validMembers) {
                 try {
-                    await fetch(`http://localhost:8000/api/projects/${result.id}/team`, {
+                    const response = await fetch(`http://localhost:8000/api/projects/${result.id}/team/`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify(member),
                     });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("Failed to add team member:", errorData);
+                        toast.error(`Failed to add team member: ${errorData.detail || 'Unknown error'}`);
+                    }
                 } catch (error) {
                     console.error("Failed to add team member:", error);
+                    toast.error("Failed to add team member");
                 }
             }
         }

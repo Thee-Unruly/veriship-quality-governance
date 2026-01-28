@@ -44,11 +44,15 @@ export default function Projects() {
 
   const fetchTeamMembers = async (projectId: number) => {
     try {
-      const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team`);
+      const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team/`);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
       const data = await res.json();
       setTeamMembers(prev => ({ ...prev, [projectId]: data }));
     } catch (err) {
       console.error("Error fetching team members:", err);
+      setTeamMembers(prev => ({ ...prev, [projectId]: [] }));
     }
   };
 
@@ -59,7 +63,7 @@ export default function Projects() {
     }
 
     try {
-      const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team`, {
+      const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -75,9 +79,13 @@ export default function Projects() {
         setNewMemberRole("");
         setAddingMemberFor(null);
         await fetchTeamMembers(projectId);
+      } else {
+        const errorData = await res.json();
+        alert(`Failed to add team member: ${errorData.detail || 'Unknown error'}`);
       }
     } catch (err) {
       console.error("Error adding team member:", err);
+      alert("Failed to add team member");
     }
   };
 

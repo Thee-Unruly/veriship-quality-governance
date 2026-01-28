@@ -52,6 +52,9 @@ def _save_jobs():
 # In-memory job tracking
 LOAD_TEST_JOBS: Dict[str, dict] = _load_jobs()
 JOB_QUEUES: Dict[str, asyncio.Queue] = {}
+
+
+def _generate_locustfile(
     base_url: str,
     endpoints: list[str],
     min_wait: int = 1,
