@@ -62,7 +62,7 @@ def _generate_locustfile(
     return locustfile_content
 
 
-def _run_locust_test(
+async def _run_locust_test_async(
     job_id: str,
     locustfile_path: str,
     users: int,
@@ -71,8 +71,6 @@ def _run_locust_test(
     host: str
 ):
     """Run Locust load test in headless mode."""
-    import threading
-    
     queue = JOB_QUEUES.get(job_id)
     
     if queue is None:
@@ -95,17 +93,11 @@ def _run_locust_test(
         "--csv", str(report_dir / "stats"),
     ]
     
-    def put_message(msg: str):
-        """Thread-safe queue put."""
-        try:
-            asyncio.run(queue.put(msg))
-        except:
-            pass
-    
     try:
-        put_message(f"🚀 Starting load test with {users} users...")
-        put_message(f"📊 Target: {host}")
-        put_message(f"⏱️  Duration: {run_time}")
+        await queue.put(f"🚀 Starting load test with {users} users...")
+        await queue.put(f"📊 Target: {host}")
+        await queue.put(f"⏱️  Duration: {run_time}")
+        await queue.put(f"🔧 Command: {' '.join(cmd[:5])}...")
         
         # Run Locust
         proc = subprocess.Popen(
@@ -118,26 +110,26 @@ def _run_locust_test(
         
         # Stream output
         for line in proc.stdout:
-            put_message(line.rstrip())
+            await queue.put(line.rstrip())
         
         proc.wait()
         
         if proc.returncode == 0:
-            put_message("✅ Load test completed successfully!")
-            put_message(f"📄 Report saved to: {report_dir / 'report.html'}")
+            await queue.put("✅ Load test completed successfully!")
+            await queue.put(f"📄 Report saved to: {report_dir / 'report.html'}")
             
             # Update job status
             LOAD_TEST_JOBS[job_id]["status"] = "completed"
             LOAD_TEST_JOBS[job_id]["report_path"] = str(report_dir / "report.html")
         else:
-            put_message(f"❌ Load test failed with exit code {proc.returncode}")
+            await queue.put(f"❌ Load test failed with exit code {proc.returncode}")
             LOAD_TEST_JOBS[job_id]["status"] = "failed"
         
     except Exception as e:
-        put_message(f"ERROR: {str(e)}")
+        await queue.put(f"ERROR: {str(e)}")
         LOAD_TEST_JOBS[job_id]["status"] = "failed"
     finally:
-        put_message("__DONE__")
+        await queue.put("__DONE__")
         
         # Cleanup locustfile
         try:
@@ -219,7 +211,7 @@ def start_load_test(
     
     # Start test in background
     background_tasks.add_task(
-        _run_locust_test,
+        _run_locust_test_async,
         job_id,
         locustfile_path,
         users,
