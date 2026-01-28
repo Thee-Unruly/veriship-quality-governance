@@ -108,16 +108,17 @@ def create_release(release: ReleaseCreate, db: Session = Depends(get_db)):
     db.add(db_release)
     db.flush()  # Get the release ID before creating approvals
     
-    # Auto-create approval records only for Project Managers
+    # Auto-create approval records only for Project Managers and QA
     team_members = db.query(TeamMember).filter(
-        TeamMember.project_id == release.project_id,
-        TeamMember.role.ilike("%project manager%")
+        TeamMember.project_id == release.project_id
+    ).filter(
+        (TeamMember.role.ilike("%project manager%")) | (TeamMember.role.ilike("%qa%"))
     ).all()
     
     if not team_members:
         raise HTTPException(
             status_code=400,
-            detail="Cannot create release: No Project Manager found in team. Add a Project Manager first."
+            detail="Cannot create release: No Project Manager or QA found in team. Add a Project Manager or QA first."
         )
     
     for member in team_members:

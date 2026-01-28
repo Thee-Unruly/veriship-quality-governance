@@ -63,8 +63,8 @@ export function CreateReleaseModal({
                         <strong>Release Requirements:</strong>
                         <ul className="mt-2 ml-4 list-disc text-sm">
                             <li>At least 80% of test cases must be completed</li>
-                            <li>A Project Manager must be assigned to the project</li>
-                            <li>Only Project Managers can approve releases</li>
+                            <li>A Project Manager or QA must be assigned to the project</li>
+                            <li>Only Project Managers and QA can approve releases</li>
                         </ul>
                     </AlertDescription>
                 </Alert>
