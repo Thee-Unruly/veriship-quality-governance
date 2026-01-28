@@ -58,33 +58,20 @@ interface ReleaseData {
   risk_score?: number;
 }
 
-const mockApprovers = [
-  {
-    id: "1",
-    name: "Ruthu Jemutai",
-    role: "QA Lead",
-    status: "approved" as const,
-    timestamp: "Jan 5, 10:23 AM",
-  },
-  {
-    id: "2",
-    name: "Barry Alfredo",
-    role: "Product Manager",
-    status: "pending" as const,
-  },
-  {
-    id: "3",
-    name: "Sydney Chirichiri",
-    role: "Engineering Lead",
-    status: "pending" as const,
-  },
-];
+interface ApproverData {
+  id: string;
+  name: string;
+  role: string;
+  status: "approved" | "pending" | "rejected";
+  timestamp?: string;
+}
 
 export default function Index() {
   const [projects, setProjects] = useState<ProjectData[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [releases, setReleases] = useState<ReleaseData[]>([]);
+  const [releaseApprovals, setReleaseApprovals] = useState<{ [releaseId: number]: ApproverData[] }>({});
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
@@ -123,7 +110,32 @@ export default function Index() {
       try {
         const releasesRes = await fetch("http://localhost:8000/api/releases/");
         const releasesData = await releasesRes.json();
-        setReleases(releasesData.filter((r: any) => r.status !== "released").slice(0, 3));
+        const pendingReleases = releasesData.filter((r: any) => r.status !== "released").slice(0, 3);
+        setReleases(pendingReleases);
+
+        // Fetch approvals for each release
+        for (const release of pendingReleases) {
+          try {
+            const approvalsRes = await fetch(`http://localhost:8000/api/releases/${release.id}/approvals`);
+            const approvalsData = await approvalsRes.json();
+
+            // Transform to frontend format
+            const transformedApprovals = approvalsData.map((approval: any) => ({
+              id: approval.id.toString(),
+              name: approval.approver_name,
+              role: approval.approver_role || "Team Member",
+              status: approval.status.toLowerCase() as "approved" | "pending" | "rejected",
+              timestamp: approval.approved_at ? new Date(approval.approved_at).toLocaleString() : undefined,
+            }));
+
+            setReleaseApprovals(prev => ({
+              ...prev,
+              [release.id]: transformedApprovals
+            }));
+          } catch (err) {
+            console.error(`Error fetching approvals for release ${release.id}:`, err);
+          }
+        }
       } catch (err) {
         console.error("Error fetching releases:", err);
       }
@@ -288,7 +300,7 @@ export default function Index() {
                   releaseDate={new Date(releases[0].planned_release_date).toLocaleDateString()}
                   riskScore={releases[0].risk_score || metrics?.overall_risk_score || 0}
                   status={(releases[0].go_no_go_decision?.toLowerCase() as any) || "pending"}
-                  approvers={mockApprovers}
+                  approvers={releaseApprovals[releases[0].id] || []}
                   releaseId={releases[0].id}
                 />
               ) : (

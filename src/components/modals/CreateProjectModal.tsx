@@ -3,8 +3,10 @@ import { FormModal } from "@/components/ui/form-modal";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { useCrud } from "@/hooks/use-crud";
 import { useProjects } from "@/context/ProjectsContext";
+import { Plus, X } from "lucide-react";
 
 interface CreateProjectModalProps {
     isOpen: boolean;
@@ -18,6 +20,12 @@ interface ProjectData {
     target_release_date?: string;
 }
 
+interface TeamMember {
+    name: string;
+    email: string;
+    role: string;
+}
+
 export function CreateProjectModal({
     isOpen,
     onOpenChange,
@@ -26,6 +34,7 @@ export function CreateProjectModal({
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [releaseDate, setReleaseDate] = useState("");
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
     const { refresh } = useProjects();
 
@@ -35,12 +44,27 @@ export function CreateProjectModal({
             setName("");
             setDescription("");
             setReleaseDate("");
+            setTeamMembers([]);
             onOpenChange(false);
             onSuccess();
             // refresh global projects list so other pages update
             try { await refresh(); } catch (e) { /* ignore */ }
         },
     });
+
+    const addTeamMember = () => {
+        setTeamMembers([...teamMembers, { name: "", email: "", role: "" }]);
+    };
+
+    const removeTeamMember = (index: number) => {
+        setTeamMembers(teamMembers.filter((_, i) => i !== index));
+    };
+
+    const updateTeamMember = (index: number, field: keyof TeamMember, value: string) => {
+        const updated = [...teamMembers];
+        updated[index][field] = value;
+        setTeamMembers(updated);
+    };
 
     const handleSubmit = async () => {
         if (!name.trim()) return;
@@ -54,7 +78,24 @@ export function CreateProjectModal({
             data.target_release_date = new Date(releaseDate).toISOString();
         }
 
-        await create(data as any);
+        const result = await create(data as any);
+
+        // If project created successfully and we have team members, add them
+        if (result && result.id && teamMembers.length > 0) {
+            const validMembers = teamMembers.filter(m => m.name.trim() && m.email.trim());
+
+            for (const member of validMembers) {
+                try {
+                    await fetch(`http://localhost:8000/api/projects/${result.id}/team`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(member),
+                    });
+                } catch (error) {
+                    console.error("Failed to add team member:", error);
+                }
+            }
+        }
     };
 
     return (
@@ -97,6 +138,80 @@ export function CreateProjectModal({
                         onChange={(e) => setReleaseDate(e.target.value)}
                         disabled={loading}
                     />
+                </div>
+
+                {/* Team Members Section */}
+                <div className="border-t pt-4 mt-4">
+                    <div className="flex items-center justify-between mb-3">
+                        <Label className="text-base font-semibold">Team Members</Label>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={addTeamMember}
+                            disabled={loading}
+                        >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add Member
+                        </Button>
+                    </div>
+
+                    {teamMembers.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                            No team members added yet. Click "Add Member" to add team members.
+                        </p>
+                    ) : (
+                        <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                            {teamMembers.map((member, index) => (
+                                <div key={index} className="border rounded-lg p-3 space-y-2 relative">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute top-2 right-2 h-6 w-6 p-0"
+                                        onClick={() => removeTeamMember(index)}
+                                        disabled={loading}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+
+                                    <div className="grid grid-cols-2 gap-2 pr-8">
+                                        <div>
+                                            <Label className="text-xs">Name</Label>
+                                            <Input
+                                                placeholder="John Doe"
+                                                value={member.name}
+                                                onChange={(e) => updateTeamMember(index, "name", e.target.value)}
+                                                disabled={loading}
+                                                className="h-8"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label className="text-xs">Role</Label>
+                                            <Input
+                                                placeholder="QA Lead"
+                                                value={member.role}
+                                                onChange={(e) => updateTeamMember(index, "role", e.target.value)}
+                                                disabled={loading}
+                                                className="h-8"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs">Email</Label>
+                                        <Input
+                                            type="email"
+                                            placeholder="john@example.com"
+                                            value={member.email}
+                                            onChange={(e) => updateTeamMember(index, "email", e.target.value)}
+                                            disabled={loading}
+                                            className="h-8"
+                                        />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </FormModal>
