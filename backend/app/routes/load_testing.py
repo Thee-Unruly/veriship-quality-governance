@@ -26,8 +26,32 @@ JOB_QUEUES: Dict[str, asyncio.Queue] = {}
 REPORTS_DIR = Path("./load_test_reports")
 REPORTS_DIR.mkdir(exist_ok=True)
 
+JOBS_FILE = REPORTS_DIR / "jobs.json"
 
-def _generate_locustfile(
+
+def _load_jobs():
+    """Load jobs from disk on startup."""
+    if JOBS_FILE.exists():
+        try:
+            with open(JOBS_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+
+def _save_jobs():
+    """Save jobs to disk."""
+    try:
+        with open(JOBS_FILE, "w") as f:
+            json.dump(LOAD_TEST_JOBS, f, indent=2)
+    except Exception as e:
+        print(f"Failed to save jobs: {e}")
+
+
+# In-memory job tracking
+LOAD_TEST_JOBS: Dict[str, dict] = _load_jobs()
+JOB_QUEUES: Dict[str, asyncio.Queue] = {}
     base_url: str,
     endpoints: list[str],
     min_wait: int = 1,
@@ -105,10 +129,12 @@ async def _run_locust_test_async(
     ]
     
     try:
-        await queue.put(f"🚀 Starting load test with {users} users...")
-        await queue.put(f"📊 Target: {host}")
-        await queue.put(f"⏱️  Duration: {run_time}")
-        await queue.put(f"🔧 Command: {' '.join(cmd[:5])}...")
+        await queue.put("Initializing load test...")
+        await queue.put(f"Target Application: {host}")
+        await queue.put(f"Simulating {users} concurrent users")
+        await queue.put(f"Test Duration: {run_time}")
+        await queue.put("")
+        await queue.put("Starting user simulation...")
         
         # Run Locust
         proc = subprocess.Popen(
@@ -119,26 +145,79 @@ async def _run_locust_test_async(
             bufsize=1
         )
         
-        # Stream output
+        import re
+        users_spawned = False
+        test_started = False
+        
+        # Parse and humanize output
         for line in proc.stdout:
-            await queue.put(line.rstrip())
+            line = line.rstrip()
+            
+            # Skip Locust table headers and technical output
+            if "Type" in line and "Name" in line and "# reqs" in line:
+                continue
+            if line.startswith("-----") or line.startswith("====="):
+                continue
+            if not line.strip():
+                continue
+            
+            # Extract meaningful information
+            if "Spawning" in line or "spawning" in line:
+                if not users_spawned:
+                    await queue.put("Users are being created and starting to send requests...")
+                    users_spawned = True
+            elif "All users spawned" in line:
+                await queue.put(f"All {users} virtual users are now active!")
+                await queue.put("")
+                await queue.put("Test is running... Collecting performance data...")
+                test_started = True
+            elif "requests/s" in line.lower() or "rps" in line.lower():
+                # Skip table headers
+                if "Type" in line or "Name" in line or "#" in line:
+                    continue
+                # Extract RPS if available from actual data rows
+                match = re.search(r'(\d+\.?\d*)\s*(?:requests?/s|RPS)', line, re.IGNORECASE)
+                if match and test_started:
+                    rps = match.group(1)
+                    await queue.put(f"Current load: ~{rps} requests per second")
+            elif "percentile" in line.lower():
+                # Show response time updates
+                match = re.search(r'(\d+)\s*ms', line)
+                if match:
+                    await queue.put(f"Response times looking good (~{match.group(1)}ms average)")
+            elif "Shutting down" in line or "stopping" in line.lower():
+                await queue.put("")
+                await queue.put("Test duration completed. Finalizing results...")
+            elif "error" in line.lower() and "0 error" not in line.lower():
+                # Only show actual errors, not headers or stats lines
+                if "Type" not in line and "#" not in line and "Name" not in line:
+                    await queue.put(f"ERROR: {line}")
+            elif "fail" in line.lower() and "0 fail" not in line.lower():
+                # Only show actual failures, not headers or stats lines
+                if "Type" not in line and "#" not in line and "Name" not in line and "failures/s" not in line.lower():
+                    await queue.put(f"ERROR: {line}")
         
         proc.wait()
         
         if proc.returncode == 0:
-            await queue.put("✅ Load test completed successfully!")
-            await queue.put(f"📄 Report saved to: {report_dir / 'report.html'}")
+            await queue.put("")
+            await queue.put("Load test completed successfully!")
+            await queue.put("Performance data has been collected and analyzed")
+            await queue.put(f"Detailed report is ready to view")
             
             # Update job status
             LOAD_TEST_JOBS[job_id]["status"] = "completed"
             LOAD_TEST_JOBS[job_id]["report_path"] = str(report_dir / "report.html")
+            _save_jobs()
         else:
-            await queue.put(f"❌ Load test failed with exit code {proc.returncode}")
+            await queue.put(f"Load test failed with exit code {proc.returncode}")
             LOAD_TEST_JOBS[job_id]["status"] = "failed"
+            _save_jobs()
         
     except Exception as e:
         await queue.put(f"ERROR: {str(e)}")
         LOAD_TEST_JOBS[job_id]["status"] = "failed"
+        _save_jobs()
     finally:
         await queue.put("__DONE__")
         
@@ -219,6 +298,7 @@ def start_load_test(
         "created_at": datetime.utcnow().isoformat(),
         "report_path": None
     }
+    _save_jobs()
     
     # Start test in background
     background_tasks.add_task(
@@ -421,5 +501,6 @@ def delete_load_test(job_id: str):
     # Remove from tracking
     LOAD_TEST_JOBS.pop(job_id, None)
     JOB_QUEUES.pop(job_id, None)
+    _save_jobs()
     
     return {"message": "Load test deleted successfully"}

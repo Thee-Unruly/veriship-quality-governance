@@ -325,24 +325,49 @@ export default function LoadTesting() {
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Activity className="h-5 w-5" />
-                                        Live Output
+                                        Test Progress
                                     </CardTitle>
                                     <CardDescription>
-                                        Real-time test execution logs
+                                        Real-time updates on your load test
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="bg-black text-green-400 p-4 rounded-md font-mono text-sm h-[500px] overflow-y-auto">
+                                    <div className="bg-slate-50 dark:bg-slate-900 border-2 p-6 rounded-lg h-[500px] overflow-y-auto">
                                         {logs.length === 0 ? (
-                                            <div className="text-gray-500">
-                                                No test running. Configure and start a test to see output.
+                                            <div className="text-center text-muted-foreground py-12">
+                                                <Activity className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                                                <p className="text-lg font-medium">Ready to start testing</p>
+                                                <p className="text-sm mt-2">Configure your test and click "Start Load Test" to begin</p>
                                             </div>
                                         ) : (
-                                            logs.map((log, idx) => (
-                                                <div key={idx} className="mb-1">
-                                                    {log}
-                                                </div>
-                                            ))
+                                            <div className="space-y-2">
+                                                {logs.map((log, idx) => {
+                                                    // Determine message type for styling
+                                                    const isSuccess = log.toLowerCase().includes('completed successfully') || log.toLowerCase().includes('all') && log.toLowerCase().includes('active');
+                                                    const isError = log.toLowerCase().includes('error') || log.toLowerCase().includes('fail') || log.toLowerCase().includes('warning');
+                                                    const isProgress = log.toLowerCase().includes('running') || log.toLowerCase().includes('collecting') || log.toLowerCase().includes('starting');
+                                                    const isMetric = log.toLowerCase().includes('requests per second') || log.toLowerCase().includes('response time');
+                                                    const isEmpty = log.trim() === '';
+
+                                                    return (
+                                                        <div
+                                                            key={idx}
+                                                            className={`
+                                                                ${isEmpty ? 'h-2' : 'p-3 rounded-md'}
+                                                                ${isSuccess ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 font-medium' : ''}
+                                                                ${isError ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 font-medium' : ''}
+                                                                ${isProgress && !isSuccess && !isError ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' : ''}
+                                                                ${isMetric && !isSuccess && !isError ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-sm' : ''}
+                                                                ${!isSuccess && !isError && !isProgress && !isMetric && !isEmpty ? 'bg-white dark:bg-slate-800/50 text-gray-700 dark:text-gray-300' : ''}
+                                                            `}
+                                                        >
+                                                            {!isEmpty && (
+                                                                <span className="leading-relaxed">{log}</span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         )}
                                     </div>
                                 </CardContent>
