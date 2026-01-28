@@ -410,9 +410,11 @@ def get_load_test_summary(job_id: str):
         "overall": {}
     }
     
+    has_data = False
     with open(stats_file, "r") as f:
         reader = csv.DictReader(f)
         for row in reader:
+            has_data = True
             if row["Name"] == "Aggregated":
                 summary["overall"] = {
                     "total_requests": int(row["Request Count"]),
@@ -434,6 +436,13 @@ def get_load_test_summary(job_id: str):
                     "avg_response_time": round(float(row["Average Response Time"]), 2),
                     "rps": round(float(row["Requests/s"]), 2)
                 })
+    
+    # If no data was collected, return a message
+    if not has_data or not summary["overall"]:
+        raise HTTPException(
+            status_code=400, 
+            detail="No test data available. The test may have completed too quickly or failed to collect stats."
+        )
     
     return summary
 
