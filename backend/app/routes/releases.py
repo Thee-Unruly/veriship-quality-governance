@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Release, ReleaseStatus
+from app.models import Release, ReleaseStatus, ReleaseApproval, TeamMember, ApprovalStatus
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
@@ -81,6 +81,19 @@ def create_release(release: ReleaseCreate, db: Session = Depends(get_db)):
         planned_release_date=release.planned_release_date,
     )
     db.add(db_release)
+    db.flush()  # Get the release ID before creating approvals
+    
+    # Auto-create approval records from team members
+    team_members = db.query(TeamMember).filter(TeamMember.project_id == release.project_id).all()
+    for member in team_members:
+        approval = ReleaseApproval(
+            release_id=db_release.id,
+            approver_name=member.name,
+            approver_role=member.role or "Team Member",
+            status=ApprovalStatus.PENDING
+        )
+        db.add(approval)
+    
     db.commit()
     db.refresh(db_release)
     return db_release
@@ -121,4 +134,32 @@ def delete_release(release_id: int, db: Session = Depends(get_db)):
     db.delete(release)
     db.commit()
     return {"status": "deleted"}
+
+
+# ========== Release Approvals ==========
+
+class ReleaseApprovalResponse(BaseModel):
+    """Release approval response schema."""
+    id: int
+    release_id: int
+    approver_name: str
+    approver_role: Optional[str]
+    status: str
+    comments: Optional[str]
+    approved_at: Optional[datetime]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/{release_id}/approvals", response_model=List[ReleaseApprovalResponse])
+def get_release_approvals(release_id: int, db: Session = Depends(get_db)):
+    """Get all approvals for a release."""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    
+    approvals = db.query(ReleaseApproval).filter(ReleaseApproval.release_id == release_id).all()
+    return approvals
 
