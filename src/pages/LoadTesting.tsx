@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { LoadTestSummaryModal } from "@/components/modals/LoadTestSummaryModal";
 import {
     Zap,
     Users,
@@ -54,6 +55,8 @@ export default function LoadTesting() {
     const [logs, setLogs] = useState<string[]>([]);
     const [jobs, setJobs] = useState<LoadTestJob[]>([]);
     const [selectedJob, setSelectedJob] = useState<LoadTestJob | null>(null);
+    const [summaryJobId, setSummaryJobId] = useState<string>("");
+    const [summaryModalOpen, setSummaryModalOpen] = useState(false);
 
     // Fetch projects
     useEffect(() => {
@@ -165,7 +168,8 @@ export default function LoadTesting() {
     };
 
     const viewReport = (jobId: string) => {
-        window.open(`http://localhost:8000/api/load-testing/${jobId}/report`, "_blank");
+        setSummaryJobId(jobId);
+        setSummaryModalOpen(true);
     };
 
     const getStatusIcon = (status: string) => {
@@ -425,6 +429,13 @@ export default function LoadTesting() {
                     </TabsContent>
                 </Tabs>
             </div>
+
+            {/* Summary Modal */}
+            <LoadTestSummaryModal
+                isOpen={summaryModalOpen}
+                onOpenChange={setSummaryModalOpen}
+                jobId={summaryJobId}
+            />
         </DashboardLayout>
     );
 }

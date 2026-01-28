@@ -295,6 +295,66 @@ def get_load_test_report(job_id: str):
     )
 
 
+@router.get("/{job_id}/summary")
+def get_load_test_summary(job_id: str):
+    """Get a user-friendly summary of the load test results."""
+    job = LOAD_TEST_JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    if job["status"] != "completed":
+        return {
+            "job_id": job_id,
+            "status": job["status"],
+            "message": "Test is still running or failed"
+        }
+    
+    # Read the CSV stats file
+    report_dir = REPORTS_DIR / job_id
+    stats_file = report_dir / "stats_stats.csv"
+    
+    if not stats_file.exists():
+        raise HTTPException(status_code=404, detail="Stats file not found")
+    
+    import csv
+    summary = {
+        "job_id": job_id,
+        "status": "completed",
+        "target_host": job.get("base_url"),
+        "users": job.get("users"),
+        "duration": job.get("run_time"),
+        "endpoints": [],
+        "overall": {}
+    }
+    
+    with open(stats_file, "r") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row["Name"] == "Aggregated":
+                summary["overall"] = {
+                    "total_requests": int(row["Request Count"]),
+                    "failures": int(row["Failure Count"]),
+                    "success_rate": round((1 - int(row["Failure Count"]) / max(int(row["Request Count"]), 1)) * 100, 2),
+                    "avg_response_time": round(float(row["Average Response Time"]), 2),
+                    "min_response_time": round(float(row["Min Response Time"]), 2),
+                    "max_response_time": round(float(row["Max Response Time"]), 2),
+                    "requests_per_second": round(float(row["Requests/s"]), 2),
+                    "median_response_time": round(float(row["Median Response Time"]), 2),
+                    "percentile_95": round(float(row["95%"]), 2),
+                    "percentile_99": round(float(row["99%"]), 2)
+                }
+            elif row["Type"] == "GET":
+                summary["endpoints"].append({
+                    "name": row["Name"],
+                    "requests": int(row["Request Count"]),
+                    "failures": int(row["Failure Count"]),
+                    "avg_response_time": round(float(row["Average Response Time"]), 2),
+                    "rps": round(float(row["Requests/s"]), 2)
+                })
+    
+    return summary
+
+
 @router.get("/{job_id}/report/pdf")
 def download_pdf_report(job_id: str):
     """Download load test report as PDF."""
