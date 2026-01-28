@@ -42,7 +42,7 @@ export default function Settings() {
 
   const fetchGeneralSettings = async () => {
     try {
-      const response = await fetch("http://localhost:8000/api/settings/general");
+      const response = await fetch("http://localhost:8000/api/settings/general/");
       if (response.ok) {
         const data = await response.json();
         setGeneralSettings(data);
@@ -54,7 +54,7 @@ export default function Settings() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("http://localhost:8000/api/users");
+      const response = await fetch("http://localhost:8000/api/users/");
       if (response.ok) {
         const data = await response.json();
         setUsers(data);
@@ -67,7 +67,7 @@ export default function Settings() {
   const saveGeneralSettings = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:8000/api/settings/general", {
+      const response = await fetch("http://localhost:8000/api/settings/general/", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(generalSettings),
@@ -104,7 +104,7 @@ export default function Settings() {
 
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:8000/api/users", {
+      const response = await fetch("http://localhost:8000/api/users/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newUser),
