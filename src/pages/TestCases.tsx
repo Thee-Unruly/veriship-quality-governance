@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckSquare, Plus, Trash2, Edit2, Info, Play } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateTestCaseModal } from "@/components/modals/CreateTestCaseModal";
 import { EditTestCaseModal } from "@/components/modals/EditTestCaseModal";
 import { RunTestSimulationModal } from "@/components/modals/RunTestSimulationModal";
@@ -16,7 +17,7 @@ export default function TestCases() {
   const [filteredTestCases, setFilteredTestCases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [requirementsMap, setRequirementsMap] = useState<Record<number, string>>({});
-  const [currentTab, setCurrentTab] = useState<"ongoing" | "completed">("ongoing");
+  const [currentTab, setCurrentTab] = useState<"ongoing" | "retest" | "pass" | "fail">("ongoing");
   const { projects, loading: projectsLoading, refresh } = useProjects();
   const [selectedProject, setSelectedProject] = useState<number | "">("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -147,16 +148,35 @@ export default function TestCases() {
     setIsRunTestModalOpen(true);
   };
 
-  const handleMarkComplete = async (id: number) => {
+  const handleStatusChange = async (id: number, status: string) => {
     try {
       await fetch(`http://localhost:8000/api/test-cases/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "completed" }),
+        body: JSON.stringify({ status }),
       });
       fetchTestCases();
     } catch (err) {
-      console.error("Failed to mark complete", err);
+      console.error("Failed to update status", err);
+    }
+  };
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case "pass": return "default";
+      case "fail": return "destructive";
+      case "retest": return "secondary";
+      default: return "outline";
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "pass": return "Pass";
+      case "fail": return "Fail";
+      case "retest": return "Retest";
+      case "ongoing": return "Ongoing";
+      default: return status;
     }
   };
 
@@ -215,10 +235,22 @@ export default function TestCases() {
             Ongoing
           </button>
           <button
-            className={`px-3 py-1 rounded ${currentTab === "completed" ? "bg-accent text-accent-foreground" : "bg-muted"}`}
-            onClick={() => setCurrentTab("completed")}
+            className={`px-3 py-1 rounded ${currentTab === "retest" ? "bg-accent text-accent-foreground" : "bg-muted"}`}
+            onClick={() => setCurrentTab("retest")}
           >
-            Completed
+            Retest
+          </button>
+          <button
+            className={`px-3 py-1 rounded ${currentTab === "pass" ? "bg-accent text-accent-foreground" : "bg-muted"}`}
+            onClick={() => setCurrentTab("pass")}
+          >
+            Pass
+          </button>
+          <button
+            className={`px-3 py-1 rounded ${currentTab === "fail" ? "bg-accent text-accent-foreground" : "bg-muted"}`}
+            onClick={() => setCurrentTab("fail")}
+          >
+            Fail
           </button>
         </div>
 
@@ -274,9 +306,17 @@ export default function TestCases() {
                               <Button variant="ghost" size="sm" onClick={() => handleEdit(tc)}>
                                 <Edit2 className="h-4 w-4 text-blue-500" />
                               </Button>
-                              {tc.status !== "completed" && (
-                                <Button variant="ghost" size="sm" onClick={() => handleMarkComplete(tc.id)}>Done</Button>
-                              )}
+                              <Select value={tc.status || "ongoing"} onValueChange={(value) => handleStatusChange(tc.id, value)}>
+                                <SelectTrigger className="w-[120px] h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="ongoing">Ongoing</SelectItem>
+                                  <SelectItem value="retest">Retest</SelectItem>
+                                  <SelectItem value="pass">Pass</SelectItem>
+                                  <SelectItem value="fail">Fail</SelectItem>
+                                </SelectContent>
+                              </Select>
                               <Button variant="ghost" size="sm" onClick={() => handleDelete(tc.id)}>
                                 <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
@@ -284,6 +324,9 @@ export default function TestCases() {
                           </div>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
+                              <Badge variant={getStatusBadgeVariant(tc.status || "ongoing")}>
+                                {getStatusLabel(tc.status || "ongoing")}
+                              </Badge>
                               <div className="text-sm">
                                 <span className="text-muted-foreground">Priority: </span>
                                 <span className="font-semibold">{getPriorityLabel(tc.priority)}</span>

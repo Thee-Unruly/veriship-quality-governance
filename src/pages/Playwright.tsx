@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -133,6 +134,8 @@ export default function Playwright() {
     const [playwrightResult, setPlaywrightResult] = useState<PlaywrightExecutionResponse | null>(null);
     const [playwrightStatus, setPlaywrightStatus] = useState<PlaywrightRunnerStatus | null>(null);
     const [isPlaywrightRunning, setIsPlaywrightRunning] = useState(false);
+    const [manualInput, setManualInput] = useState<string>("");
+    const [isManualRunning, setIsManualRunning] = useState(false);
 
     // Load projects
     useEffect(() => {
@@ -244,6 +247,73 @@ export default function Playwright() {
             });
         } finally {
             setIsPlaywrightRunning(false);
+            fetchPlaywrightStatus();
+        }
+    };
+
+    const loadManualSample = () => {
+        const sample = {
+            steps: [
+                { type: "navigate", url: "/login", description: "Open login page" },
+                { type: "fill", selector: "#username", value: "testuser" },
+                { type: "fill", selector: "#password", value: "password" },
+                { type: "click", selector: "button[type=\"submit\"]" },
+                { type: "assert", selector: "#dashboard", expected_contains: "Welcome" }
+            ]
+        };
+
+        setManualInput(JSON.stringify(sample, null, 2));
+        toast({ title: "Sample loaded", description: "Manual login steps ready" });
+    };
+
+    const runManualTest = async () => {
+        if (!manualInput) {
+            toast({ title: "No steps", description: "Paste manual test steps as JSON", variant: "destructive" });
+            return;
+        }
+
+        let parsed: any;
+        try {
+            parsed = JSON.parse(manualInput);
+        } catch (e: any) {
+            toast({ title: "Invalid JSON", description: e.message || "Cannot parse JSON", variant: "destructive" });
+            return;
+        }
+
+        const steps = parsed.steps && Array.isArray(parsed.steps) ? parsed.steps : (Array.isArray(parsed) ? parsed : []);
+        if (!steps.length) {
+            toast({ title: "No steps found", description: "Provide an array of steps or an object with a 'steps' array", variant: "destructive" });
+            return;
+        }
+
+        setIsManualRunning(true);
+        setPlaywrightResult(null);
+
+        try {
+            const body = { config: playwrightConfig, steps };
+            const response = await fetch("http://localhost:8000/api/automation/execute/manual", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.detail || "Execution failed");
+            }
+
+            const data: PlaywrightExecutionResponse = await response.json();
+            setPlaywrightResult(data);
+
+            toast({
+                title: data.status === "passed" ? "Test Passed ✓" : "Test Failed",
+                description: `Completed in ${(data.duration_ms / 1000).toFixed(1)}s`,
+                variant: data.status === "passed" ? "default" : "destructive",
+            });
+        } catch (error: any) {
+            toast({ title: "Execution Error", description: error.message || "Failed to execute test", variant: "destructive" });
+        } finally {
+            setIsManualRunning(false);
             fetchPlaywrightStatus();
         }
     };
@@ -476,6 +546,39 @@ export default function Playwright() {
                                     />
                                 </div>
 
+                                {/* Manual Steps JSON (optional) */}
+                                <div className="pt-4 border-t border-border/50 space-y-2">
+                                    <Label className="text-base font-semibold">Manual Steps (JSON)</Label>
+                                    <Textarea
+                                        value={manualInput}
+                                        onChange={(e) => setManualInput(e.target.value)}
+                                        placeholder='[ { "type": "navigate", "url": "/login" }, ... ] or { "steps": [...] }'
+                                        className="h-40 font-mono text-sm"
+                                    />
+                                    <div className="flex gap-2">
+                                        <Button onClick={loadManualSample} variant="ghost" size="sm" className="rounded-lg">
+                                            Load Sample
+                                        </Button>
+                                        <Button
+                                            onClick={runManualTest}
+                                            disabled={isManualRunning}
+                                            className="ml-auto h-10 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-xl"
+                                        >
+                                            {isManualRunning ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Running...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Play className="mr-2 h-4 w-4" />
+                                                    Run Manual Test
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+
                                 {/* Execute Button */}
                                 <div className="flex gap-3 pt-4">
                                     <motion.div className="flex-1" whileTap={{ scale: 0.98 }}>
@@ -564,15 +667,15 @@ export default function Playwright() {
                                             <motion.div
                                                 variants={itemVariants}
                                                 className={`flex items-center justify-between p-5 rounded-xl border ${playwrightResult.status === "passed"
-                                                        ? "bg-emerald-500/5 border-emerald-500/20"
-                                                        : "bg-rose-500/5 border-rose-500/20"
+                                                    ? "bg-emerald-500/5 border-emerald-500/20"
+                                                    : "bg-rose-500/5 border-rose-500/20"
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-4">
                                                     <motion.div
                                                         className={`p-3 rounded-xl ${playwrightResult.status === "passed"
-                                                                ? "bg-emerald-500/20"
-                                                                : "bg-rose-500/20"
+                                                            ? "bg-emerald-500/20"
+                                                            : "bg-rose-500/20"
                                                             }`}
                                                         initial={{ scale: 0 }}
                                                         animate={{ scale: 1 }}

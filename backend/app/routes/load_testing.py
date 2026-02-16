@@ -460,12 +460,24 @@ def download_pdf_report(job_id: str):
     report_path = Path(job["report_path"])
     pdf_path = report_path.parent / "report.pdf"
     
-    # Convert HTML to PDF using pdfkit
-    try:
-        import pdfkit
-        pdfkit.from_file(str(report_path), str(pdf_path))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
+    # Only generate PDF if it doesn't exist yet
+    if not pdf_path.exists():
+        try:
+            from weasyprint import HTML
+            
+            # Read the HTML content
+            with open(report_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+            
+            # Generate PDF
+            HTML(string=html_content).write_pdf(pdf_path)
+        except ImportError:
+            raise HTTPException(
+                status_code=500, 
+                detail="PDF generation not available. Please install weasyprint."
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
     
     if not pdf_path.exists():
         raise HTTPException(status_code=404, detail="PDF generation failed")

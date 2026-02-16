@@ -56,6 +56,7 @@ export function LoadTestSummaryModal({
 }: LoadTestSummaryModalProps) {
     const [summary, setSummary] = useState<LoadTestSummary | null>(null);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen && jobId) {
@@ -65,14 +66,19 @@ export function LoadTestSummaryModal({
 
     const fetchSummary = async () => {
         setLoading(true);
+        setError(null);
         try {
             const response = await fetch(`http://localhost:8000/api/load-testing/${jobId}/summary`);
             if (response.ok) {
                 const data = await response.json();
                 setSummary(data);
+            } else {
+                const errorData = await response.json();
+                setError(errorData.detail || "Failed to load summary");
             }
         } catch (error) {
             console.error("Failed to fetch summary:", error);
+            setError("Failed to load summary. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -81,6 +87,26 @@ export function LoadTestSummaryModal({
     const viewFullReport = () => {
         window.open(`http://localhost:8000/api/load-testing/${jobId}/report`, "_blank");
     };
+
+    if (error) {
+        return (
+            <Dialog open={isOpen} onOpenChange={onOpenChange}>
+                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Load Test Summary</DialogTitle>
+                    </DialogHeader>
+                    <div className="py-12 text-center">
+                        <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+                        <p className="text-muted-foreground mb-4">{error}</p>
+                        <Button onClick={viewFullReport} variant="outline">
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            View Full HTML Report
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
+    }
 
     if (loading || !summary) {
         return (

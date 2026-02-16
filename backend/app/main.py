@@ -42,7 +42,7 @@ app.add_middleware(
 from app.routes import (
     projects, requirements, test_cases, defects, releases, 
     metrics, auth, copilot, test_runs, trial, automation, 
-    load_testing, users
+    load_testing, users, ai_testing
 )
 from app.routes import settings as settings_routes
 
@@ -59,6 +59,7 @@ app.include_router(test_runs.router, prefix="/api/test-runs", tags=["Test Runs"]
 app.include_router(trial.router, prefix="/api/trial", tags=["Trial Runner"])
 app.include_router(automation.router, prefix="/api/automation", tags=["Playwright Automation"])
 app.include_router(load_testing.router, prefix="/api/load-testing", tags=["Load Testing"])
+app.include_router(ai_testing.router)
 app.include_router(settings_routes.router, prefix="/api/settings", tags=["Settings"])
 app.include_router(users.router, prefix="/api/users", tags=["Users"])
 

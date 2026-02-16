@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences
+GET,//category/48,HTTPError('520 Server Error: <none> for url: //category/48'),336

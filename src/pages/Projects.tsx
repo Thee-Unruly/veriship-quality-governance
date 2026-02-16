@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useProjects } from "@/context/ProjectsContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { FolderKanban, Plus, Trash2, Edit2, Users, UserPlus, Mail } from "lucide-react";
 import { RefreshCw } from "lucide-react";
 import { CreateProjectModal } from "@/components/modals/CreateProjectModal";
@@ -23,6 +24,7 @@ export default function Projects() {
   const [newMemberRole, setNewMemberRole] = useState("");
   const [addingMemberFor, setAddingMemberFor] = useState<number | null>(null);
   const [editingMember, setEditingMember] = useState<any>(null);
+  const fetchedProjectsRef = useRef<Set<number>>(new Set());
 
   const { delete: deleteProject } = useCrud({
     baseUrl: "http://localhost:8000/api/projects",
@@ -85,7 +87,7 @@ export default function Projects() {
       }
     } catch (err) {
       console.error("Error adding team member:", err);
-      alert("Failed to add team member");
+      alert("Failed to add team member. Please try again.");
     }
   };
 
@@ -144,6 +146,15 @@ export default function Projects() {
 
   useEffect(() => {
     setFilteredProjects(projects);
+    // Fetch team members for all projects (only once per project)
+    if (projects.length > 0) {
+      projects.forEach((project: any) => {
+        if (project.id && !fetchedProjectsRef.current.has(project.id)) {
+          fetchedProjectsRef.current.add(project.id);
+          fetchTeamMembers(project.id);
+        }
+      });
+    }
   }, [projects]);
 
   useEffect(() => {

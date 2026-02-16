@@ -131,10 +131,18 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
             detail="Username or email already exists"
         )
     
+    # Construct full name
+    name = request.username
+    if request.first_name and request.last_name:
+        name = f"{request.first_name} {request.last_name}"
+    elif request.first_name:
+        name = request.first_name
+
     # Create new user
     user = User(
         username=request.username,
         email=request.email,
+        name=name,
         password_hash=hash_password(request.password),
         first_name=request.first_name,
         last_name=request.last_name,
