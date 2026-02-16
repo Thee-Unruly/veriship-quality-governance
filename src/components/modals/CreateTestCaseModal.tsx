@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FormModal } from "@/components/ui/form-modal";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +30,25 @@ export function CreateTestCaseModal({
     const [testType, setTestType] = useState("manual");
     const [priority, setPriority] = useState("1");
 
+    const [requirementId, setRequirementId] = useState<string>("none");
+    const [requirements, setRequirements] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!projectId) return;
+        const fetchReqs = async () => {
+            try {
+                const res = await fetch(`http://localhost:8000/api/requirements/${projectId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setRequirements(data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch requirements", err);
+            }
+        };
+        fetchReqs();
+    }, [projectId, isOpen]);
+
     const { create, loading } = useCrud({
         baseUrl: "http://localhost:8000/api/test-cases",
         onSuccess: () => {
@@ -37,6 +56,7 @@ export function CreateTestCaseModal({
             setDescription("");
             setTestType("manual");
             setPriority("1");
+            setRequirementId("none");
             onOpenChange(false);
             onSuccess();
         },
@@ -45,12 +65,15 @@ export function CreateTestCaseModal({
     const handleSubmit = async () => {
         if (!title.trim()) return;
 
+        const reqId = requirementId === "none" ? null : parseInt(requirementId);
+
         await create({
             project_id: projectId,
             title,
             description,
             test_type: testType,
             priority: parseInt(priority),
+            requirement_id: reqId,
         } as any);
     };
 
@@ -84,6 +107,22 @@ export function CreateTestCaseModal({
                         disabled={loading}
                         rows={3}
                     />
+                </div>
+                <div>
+                    <Label htmlFor="requirement">Link to Requirement</Label>
+                    <Select value={requirementId} onValueChange={setRequirementId} disabled={loading}>
+                        <SelectTrigger id="requirement">
+                            <SelectValue placeholder="Select a requirement (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="none">-- No Requirement --</SelectItem>
+                            {requirements.map((req: any) => (
+                                <SelectItem key={req.id} value={req.id.toString()}>
+                                    {req.requirement_id || req.title}: {req.title}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
                 <div>
                     <Label htmlFor="test-type">Test Type *</Label>
