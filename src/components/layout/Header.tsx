@@ -89,6 +89,46 @@ export function Header() {
       .join("")
       .toUpperCase() || "U";
 
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  useEffect(() => {
+    // Poll for notifications every minute or on mount
+    const fetchNotifications = async () => {
+      setLoadingNotifications(true);
+      try {
+        const res = await fetch("http://localhost:8000/api/notifications/");
+        if (res.ok) {
+          const data = await res.json();
+          setNotifications(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch notifications", err);
+      } finally {
+        setLoadingNotifications(false);
+      }
+    };
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Format relative time helper
+  const timeAgo = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (seconds < 60) return "just now";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {/* Search */}
@@ -125,27 +165,41 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="relative text-muted-foreground">
               <Bell className="h-5 w-5" />
-              <span className="absolute right-1.5 top-1.5 flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75"></span>
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-accent"></span>
-              </span>
+              {notifications.length > 0 && (
+                <span className="absolute right-1.5 top-1.5 flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-accent"></span>
+                </span>
+              )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-80 max-h-[400px] overflow-y-auto">
+            <DropdownMenuLabel className="flex justify-between items-center">
+              <span>Notifications</span>
+              {notifications.length > 0 && (
+                <span className="text-xs font-normal text-muted-foreground">{notifications.length} new</span>
+              )}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-              <p className="text-sm font-medium">Release v2.4.0 Ready for Review</p>
-              <p className="text-xs text-muted-foreground">Project Alpha requires your approval</p>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-              <p className="text-sm font-medium">3 New Defects Reported</p>
-              <p className="text-xs text-muted-foreground">High severity issues in Project Beta</p>
-            </DropdownMenuItem>
-            <DropdownMenuItem className="flex flex-col items-start gap-1 p-3">
-              <p className="text-sm font-medium">AI Analysis Complete</p>
-              <p className="text-xs text-muted-foreground">15 requirements reviewed with suggestions</p>
-            </DropdownMenuItem>
+            {loadingNotifications ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">Loading...</div>
+            ) : notifications.length === 0 ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">No new notifications</div>
+            ) : (
+              notifications.map((notif: any) => (
+                <DropdownMenuItem
+                  key={notif.id}
+                  className="flex flex-col items-start gap-1 p-3 cursor-pointer"
+                  onClick={() => notif.link && navigate(notif.link)}
+                >
+                  <div className="flex justify-between w-full">
+                    <p className="text-sm font-medium leading-none">{notif.type === 'defect' ? '🐛 ' : notif.type === 'insight' ? '✨ ' : '📋 '}{notif.title}</p>
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">{timeAgo(notif.timestamp)}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{notif.description}</p>
+                </DropdownMenuItem>
+              ))
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
