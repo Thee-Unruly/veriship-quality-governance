@@ -237,6 +237,12 @@ Generate at least 3-5 test cases. Only respond with valid JSON, no additional te
         except Exception:
             db.rollback()
 
+        if not settings.openrouter_testcase_api_key:
+            raise HTTPException(
+                status_code=400,
+                detail="OpenRouter Test Case API key not configured. Please set OPENROUTER_TESTCASE_API_KEY (or OPENROUTER_API_KEY)."
+            )
+
         ai_response = call_openrouter(
             settings.openrouter_testcase_api_key,
             prompt
@@ -409,6 +415,12 @@ Only respond with valid JSON, no additional text."""
             db.refresh(db_prompt)
         except Exception:
             db.rollback()
+
+        if not settings.openrouter_clarity_api_key:
+            raise HTTPException(
+                status_code=400,
+                detail="OpenRouter Clarity API key not configured (used for release checking). Please set OPENROUTER_CLARITY_API_KEY (or OPENROUTER_API_KEY)."
+            )
 
         ai_response = call_openrouter(
             settings.openrouter_clarity_api_key,  # Reuse clarity key for release analysis

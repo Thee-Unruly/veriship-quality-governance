@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     claude_api_key: str = ""
     
     # OpenRouter API Configuration
+    openrouter_api_key: str = ""  # Generic fallback key
     openrouter_clarity_api_key: str = ""
     openrouter_testcase_api_key: str = ""
     openrouter_trial_api_key: str = ""
@@ -38,6 +39,17 @@ class Settings(BaseSettings):
     openrouter_model: str = "google/gemma-3-27b-it:free"
     openrouter_site_url: str = "http://localhost:8082"
     openrouter_site_name: str = "VeriShip QA Platform"
+
+    def model_post_init(self, __context):
+        """Fallback to generic API key if specific ones are missing."""
+        super().model_post_init(__context)
+        if self.openrouter_api_key:
+            if not self.openrouter_clarity_api_key:
+                self.openrouter_clarity_api_key = self.openrouter_api_key
+            if not self.openrouter_testcase_api_key:
+                self.openrouter_testcase_api_key = self.openrouter_api_key
+            if not self.openrouter_trial_api_key:
+                self.openrouter_trial_api_key = self.openrouter_api_key
     
     # JWT
     secret_key: str = "dev-secret-key-change-in-production"
