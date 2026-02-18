@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import ChatBot from "../chat/ChatBot";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -14,6 +15,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         <Header />
         <main className="p-6">{children}</main>
       </div>
+      <ChatBot />
     </div>
   );
 }
