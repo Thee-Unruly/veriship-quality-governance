@@ -137,12 +137,12 @@ export default function ChatBot() {
           right: 24px;
           width: 400px;
           height: 600px;
-          background: hsl(222 47% 6%);
-          border: 1px solid hsl(222 30% 18%);
+          background: hsl(222 47% 12%);
+          border: 1px solid hsl(222 30% 25%);
           border-radius: 24px;
           display: flex;
           flex-direction: column;
-          box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+          box-shadow: 0 24px 80px rgba(15, 23, 42, 0.6);
           z-index: 9998;
           overflow: hidden;
           transform-origin: bottom right;
@@ -155,11 +155,11 @@ export default function ChatBot() {
 
         .cb-header {
           padding: 20px 24px;
-          border-bottom: 1px solid hsl(222 30% 18%);
+          border-bottom: 1px solid hsl(222 30% 25%);
           display: flex;
           align-items: center;
           gap: 14px;
-          background: hsl(222 47% 10%);
+          background: hsl(222 47% 18%);
         }
         .cb-avatar {
           width: 40px;
@@ -249,9 +249,9 @@ export default function ChatBot() {
           box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
         }
         .cb-msg.assistant .cb-bubble-text {
-          background: hsl(222 30% 15%);
+          background: hsl(222 30% 22%);
           color: hsl(210 40% 98%);
-          border: 1px solid hsl(222 30% 18%);
+          border: 1px solid hsl(222 30% 30%);
           border-bottom-left-radius: 4px;
         }
 
@@ -260,8 +260,8 @@ export default function ChatBot() {
           gap: 4px;
           align-items: center;
           padding: 12px 14px;
-          background: #161616;
-          border: 1px solid #222;
+          background: hsl(222 30% 22%);
+          border: 1px solid hsl(222 30% 30%);
           border-radius: 16px;
           border-bottom-left-radius: 4px;
           width: fit-content;
@@ -282,16 +282,16 @@ export default function ChatBot() {
 
         .cb-input-area {
           padding: 20px 24px;
-          border-top: 1px solid hsl(222 30% 18%);
-          background: hsl(222 47% 8%);
+          border-top: 1px solid hsl(222 30% 25%);
+          background: hsl(222 47% 10%);
           display: flex;
           gap: 12px;
           align-items: flex-end;
         }
         .cb-input {
           flex: 1;
-          background: hsl(222 30% 12%);
-          border: 1px solid hsl(222 30% 18%);
+          background: hsl(222 30% 16%);
+          border: 1px solid hsl(222 30% 25%);
           border-radius: 16px;
           color: #ffffff;
           font-size: 14px;
@@ -304,8 +304,8 @@ export default function ChatBot() {
           line-height: 1.5;
           transition: all 0.2s;
         }
-        .cb-input::placeholder { color: hsl(215 16% 40%); }
-        .cb-input:focus { border-color: hsl(217 91% 60%); background: hsl(222 30% 14%); }
+        .cb-input::placeholder { color: hsl(215 16% 50%); }
+        .cb-input:focus { border-color: hsl(217 91% 60%); background: hsl(222 30% 20%); }
 
         .cb-send {
           width: 44px;
@@ -358,7 +358,7 @@ export default function ChatBot() {
             <div className="cb-header">
               <div className="cb-avatar">🗄️</div>
               <div className="cb-header-info">
-                <div className="cb-header-name">Data Assistant</div>
+                <div className="cb-header-name">Amira</div>
                 <div className="cb-header-status">
                   <div className="cb-status-dot" />
                   Connected to your database
@@ -410,7 +410,7 @@ export default function ChatBot() {
                 </svg>
               </button>
             </div>
-            <div className="cb-footer">powered by your postgres db</div>
+            <div className="cb-footer">powered by your n8n</div>
           </div>
         )}
 
