@@ -6,140 +6,140 @@ import { useLocation } from "react-router-dom";
 const N8N_WEBHOOK_URL = "https://heavily-busy-titmouse.ngrok-free.app/webhook/rag-chat-webhook-001";
 
 function generateSessionId() {
-    return "session-" + Math.random().toString(36).substring(2, 12);
+  return "session-" + Math.random().toString(36).substring(2, 12);
 }
 
 function getSessionId() {
-    if (typeof window === "undefined") return "default-session";
-    let id = sessionStorage.getItem("chat_session_id");
-    if (!id) {
-        id = generateSessionId();
-        sessionStorage.setItem("chat_session_id", id);
-    }
-    return id;
+  if (typeof window === "undefined") return "default-session";
+  let id = sessionStorage.getItem("chat_session_id");
+  if (!id) {
+    id = generateSessionId();
+    sessionStorage.setItem("chat_session_id", id);
+  }
+  return id;
 }
 
 export default function ChatBot() {
-    const [open, setOpen] = useState(false);
-    const location = useLocation();
-    const [messages, setMessages] = useState([
-        {
-            role: "assistant",
-            text: "Hi! 👋 Ask me anything about your orders, customers, or products.",
-        },
-    ]);
-    const [input, setInput] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [sessionId] = useState(getSessionId);
-    const bottomRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [open, setOpen] = useState(false);
+  const location = useLocation();
+  const [messages, setMessages] = useState([
+    {
+      role: "assistant",
+      text: "Hi! 👋 Ask me anything about your quality governance, projects, or releases.",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sessionId] = useState(getSessionId);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-    // Define paths where the chatbot should be visible
-    const qaManagementPaths = ["/projects", "/requirements", "/test-cases", "/defects", "/releases"];
-    const isVisible = qaManagementPaths.some(path => location.pathname.startsWith(path));
+  // Define paths where the chatbot should be visible
+  const qaManagementPaths = ["/projects", "/requirements", "/test-cases", "/defects", "/releases"];
+  const isVisible = qaManagementPaths.some(path => location.pathname.startsWith(path));
 
-    useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, loading]);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
 
-    useEffect(() => {
-        if (open) setTimeout(() => inputRef.current?.focus(), 100);
-    }, [open]);
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 100);
+  }, [open]);
 
-    if (!isVisible) return null;
+  if (!isVisible) return null;
 
-    async function sendMessage() {
-        const text = input.trim();
-        if (!text || loading) return;
+  async function sendMessage() {
+    const text = input.trim();
+    if (!text || loading) return;
 
-        setMessages((prev) => [...prev, { role: "user", text }]);
-        setInput("");
-        setLoading(true);
+    setMessages((prev) => [...prev, { role: "user", text }]);
+    setInput("");
+    setLoading(true);
 
-        try {
-            const res = await fetch(N8N_WEBHOOK_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ chatInput: text, sessionId }),
-            });
-            const data = await res.json();
-            const reply =
-                data?.output ||
-                data?.text ||
-                data?.message ||
-                data?.[0]?.output ||
-                "Sorry, I couldn't get a response.";
+    try {
+      const res = await fetch(N8N_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chatInput: text, sessionId }),
+      });
+      const data = await res.json();
+      const reply =
+        data?.output ||
+        data?.text ||
+        data?.message ||
+        data?.[0]?.output ||
+        "Sorry, I couldn't get a response.";
 
-            setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
-        } catch (err) {
-            setMessages((prev) => [
-                ...prev,
-                { role: "assistant", text: "⚠️ Connection error. Please try again." },
-            ]);
-        } finally {
-            setLoading(false);
-        }
+      setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", text: "⚠️ Connection error. Please try again." },
+      ]);
+    } finally {
+      setLoading(false);
     }
+  }
 
-    function handleKey(e: React.KeyboardEvent) {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
+  }
 
-    return (
-        <>
-            <style>{`
+  return (
+    <>
+      <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
 
         .cb-root * { box-sizing: border-box; font-family: 'DM Sans', sans-serif; }
 
         .cb-bubble {
           position: fixed;
-          bottom: 28px;
-          right: 28px;
-          width: 56px;
-          height: 56px;
+          bottom: 24px;
+          right: 24px;
+          width: 60px;
+          height: 60px;
           border-radius: 50%;
-          background: #0f0f0f;
-          border: 1.5px solid #2a2a2a;
+          background: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(199 89% 48%) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           color: white;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+          box-shadow: 0 8px 32px rgba(15, 23, 42, 0.4);
           transition: transform 0.2s ease, box-shadow 0.2s ease;
           z-index: 9999;
         }
         .cb-bubble:hover {
           transform: scale(1.08);
-          box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+          box-shadow: 0 12px 40px rgba(15, 23, 42, 0.5), 0 0 20px rgba(37, 99, 235, 0.3);
         }
         .cb-bubble svg { transition: transform 0.3s ease; }
         .cb-bubble.open svg { transform: rotate(90deg); }
 
         .cb-badge {
           position: absolute;
-          top: -3px;
-          right: -3px;
+          top: 0px;
+          right: 0px;
           width: 14px;
           height: 14px;
-          background: #22c55e;
+          background: #ef4444;
           border-radius: 50%;
-          border: 2px solid white;
+          border: 2px solid hsl(222 47% 11%);
         }
 
         .cb-window {
           position: fixed;
           bottom: 96px;
-          right: 28px;
-          width: 380px;
-          height: 560px;
-          background: #0a0a0a;
-          border: 1px solid #1e1e1e;
-          border-radius: 20px;
+          right: 24px;
+          width: 400px;
+          height: 600px;
+          background: hsl(222 47% 6%);
+          border: 1px solid hsl(222 30% 18%);
+          border-radius: 24px;
           display: flex;
           flex-direction: column;
           box-shadow: 0 24px 80px rgba(0,0,0,0.6);
@@ -154,56 +154,58 @@ export default function ChatBot() {
         }
 
         .cb-header {
-          padding: 18px 20px 14px;
-          border-bottom: 1px solid #1a1a1a;
+          padding: 20px 24px;
+          border-bottom: 1px solid hsl(222 30% 18%);
           display: flex;
           align-items: center;
-          gap: 12px;
-          background: #0f0f0f;
+          gap: 14px;
+          background: hsl(222 47% 10%);
         }
         .cb-avatar {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
-          background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-          border: 1px solid #2e2e2e;
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          background: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(199 89% 48%) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 16px;
+          font-size: 18px;
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
         }
         .cb-header-info { flex: 1; }
         .cb-header-name {
-          font-size: 13.5px;
-          font-weight: 600;
-          color: #f0f0f0;
-          letter-spacing: -0.2px;
+          font-size: 15px;
+          font-weight: 700;
+          color: #ffffff;
+          letter-spacing: -0.3px;
         }
         .cb-header-status {
-          font-size: 11.5px;
-          color: #555;
+          font-size: 12px;
+          color: hsl(215 20% 65%);
           display: flex;
           align-items: center;
-          gap: 5px;
-          margin-top: 1px;
+          gap: 6px;
+          margin-top: 2px;
         }
         .cb-status-dot {
-          width: 6px;
-          height: 6px;
+          width: 8px;
+          height: 8px;
           background: #22c55e;
           border-radius: 50%;
+          box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
         }
         .cb-close {
           background: none;
           border: none;
-          color: #444;
+          color: hsl(215 20% 65%);
           cursor: pointer;
-          padding: 4px;
-          border-radius: 6px;
+          padding: 6px;
+          border-radius: 8px;
           display: flex;
-          transition: color 0.15s, background 0.15s;
+          transition: all 0.2s;
         }
-        .cb-close:hover { color: #aaa; background: #1a1a1a; }
+        .cb-close:hover { color: #ffffff; background: hsl(222 30% 15%); }
 
         .cb-messages {
           flex: 1;
@@ -232,23 +234,24 @@ export default function ChatBot() {
         .cb-msg.assistant { align-self: flex-start; align-items: flex-start; }
 
         .cb-bubble-text {
-          padding: 10px 14px;
-          border-radius: 16px;
-          font-size: 13.5px;
-          line-height: 1.55;
+          padding: 12px 16px;
+          border-radius: 18px;
+          font-size: 14px;
+          line-height: 1.6;
           white-space: pre-wrap;
           word-break: break-word;
         }
         .cb-msg.user .cb-bubble-text {
-          background: #f0f0f0;
-          color: #0a0a0a;
+          background: hsl(217 91% 60%);
+          color: #ffffff;
           border-bottom-right-radius: 4px;
           font-weight: 500;
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
         }
         .cb-msg.assistant .cb-bubble-text {
-          background: #161616;
-          color: #d4d4d4;
-          border: 1px solid #222;
+          background: hsl(222 30% 15%);
+          color: hsl(210 40% 98%);
+          border: 1px solid hsl(222 30% 18%);
           border-bottom-left-radius: 4px;
         }
 
@@ -278,48 +281,53 @@ export default function ChatBot() {
         }
 
         .cb-input-area {
-          padding: 12px 14px 16px;
-          border-top: 1px solid #1a1a1a;
-          background: #0f0f0f;
+          padding: 20px 24px;
+          border-top: 1px solid hsl(222 30% 18%);
+          background: hsl(222 47% 8%);
           display: flex;
-          gap: 10px;
+          gap: 12px;
           align-items: flex-end;
         }
         .cb-input {
           flex: 1;
-          background: #161616;
-          border: 1px solid #232323;
-          border-radius: 12px;
-          color: #e8e8e8;
-          font-size: 13.5px;
+          background: hsl(222 30% 12%);
+          border: 1px solid hsl(222 30% 18%);
+          border-radius: 16px;
+          color: #ffffff;
+          font-size: 14px;
           font-family: 'DM Sans', sans-serif;
-          padding: 10px 14px;
+          padding: 12px 16px;
           resize: none;
           outline: none;
-          min-height: 42px;
-          max-height: 100px;
+          min-height: 48px;
+          max-height: 120px;
           line-height: 1.5;
-          transition: border-color 0.15s;
+          transition: all 0.2s;
         }
-        .cb-input::placeholder { color: #3a3a3a; }
-        .cb-input:focus { border-color: #333; }
+        .cb-input::placeholder { color: hsl(215 16% 40%); }
+        .cb-input:focus { border-color: hsl(217 91% 60%); background: hsl(222 30% 14%); }
 
         .cb-send {
-          width: 38px;
-          height: 38px;
-          border-radius: 10px;
-          background: #f0f0f0;
+          width: 44px;
+          height: 44px;
+          border-radius: 14px;
+          background: hsl(217 91% 60%);
           border: none;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: background 0.15s, transform 0.1s;
+          transition: all 0.2s;
           flex-shrink: 0;
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
         }
-        .cb-send:hover:not(:disabled) { background: #fff; transform: scale(1.05); }
-        .cb-send:disabled { background: #1e1e1e; cursor: not-allowed; }
-        .cb-send:disabled svg path { stroke: #333; }
+        .cb-send:hover:not(:disabled) { 
+          background: hsl(217 91% 65%); 
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+        }
+        .cb-send:disabled { background: hsl(222 30% 20%); cursor: not-allowed; box-shadow: none; }
+        .cb-send:disabled svg path { stroke: hsl(215 16% 40%); }
 
         .cb-footer {
           text-align: center;
@@ -342,88 +350,88 @@ export default function ChatBot() {
         }
       `}</style>
 
-            <div className="cb-root">
-                {/* Chat Window */}
-                {open && (
-                    <div className="cb-window" role="dialog" aria-label="Chat assistant">
-                        {/* Header */}
-                        <div className="cb-header">
-                            <div className="cb-avatar">🗄️</div>
-                            <div className="cb-header-info">
-                                <div className="cb-header-name">Data Assistant</div>
-                                <div className="cb-header-status">
-                                    <div className="cb-status-dot" />
-                                    Connected to your database
-                                </div>
-                            </div>
-                            <button className="cb-close" onClick={() => setOpen(false)} aria-label="Close chat">
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                    <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        {/* Messages */}
-                        <div className="cb-messages">
-                            {messages.map((msg, i) => (
-                                <div key={i} className={`cb-msg ${msg.role}`}>
-                                    <div className="cb-bubble-text">{msg.text}</div>
-                                </div>
-                            ))}
-                            {loading && (
-                                <div className="cb-msg assistant">
-                                    <div className="cb-typing">
-                                        <span /><span /><span />
-                                    </div>
-                                </div>
-                            )}
-                            <div ref={bottomRef} />
-                        </div>
-
-                        {/* Input */}
-                        <div className="cb-input-area">
-                            <textarea
-                                ref={inputRef}
-                                className="cb-input"
-                                placeholder="Ask about orders, customers..."
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={handleKey}
-                                rows={1}
-                            />
-                            <button
-                                className="cb-send"
-                                onClick={sendMessage}
-                                disabled={!input.trim() || loading}
-                                aria-label="Send message"
-                            >
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                                    <path d="M13.5 8H2.5M13.5 8L9 3.5M13.5 8L9 12.5" stroke="#0a0a0a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div className="cb-footer">powered by your postgres db</div>
-                    </div>
-                )}
-
-                {/* Floating Bubble */}
-                <button
-                    className={`cb-bubble ${open ? "open" : ""}`}
-                    onClick={() => setOpen((v) => !v)}
-                    aria-label="Toggle chat"
-                >
-                    {!open && <div className="cb-badge" />}
-                    {open ? (
-                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                            <path d="M14 4L4 14M4 4l10 10" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
-                        </svg>
-                    ) : (
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M17 10c0 3.866-3.134 7-7 7a6.973 6.973 0 01-3.5-.937L3 17l.937-3.5A6.973 6.973 0 013 10c0-3.866 3.134-7 7-7s7 3.134 7 7z" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                    )}
-                </button>
+      <div className="cb-root">
+        {/* Chat Window */}
+        {open && (
+          <div className="cb-window" role="dialog" aria-label="Chat assistant">
+            {/* Header */}
+            <div className="cb-header">
+              <div className="cb-avatar">🗄️</div>
+              <div className="cb-header-info">
+                <div className="cb-header-name">Data Assistant</div>
+                <div className="cb-header-status">
+                  <div className="cb-status-dot" />
+                  Connected to your database
+                </div>
+              </div>
+              <button className="cb-close" onClick={() => setOpen(false)} aria-label="Close chat">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
             </div>
-        </>
-    );
+
+            {/* Messages */}
+            <div className="cb-messages">
+              {messages.map((msg, i) => (
+                <div key={i} className={`cb-msg ${msg.role}`}>
+                  <div className="cb-bubble-text">{msg.text}</div>
+                </div>
+              ))}
+              {loading && (
+                <div className="cb-msg assistant">
+                  <div className="cb-typing">
+                    <span /><span /><span />
+                  </div>
+                </div>
+              )}
+              <div ref={bottomRef} />
+            </div>
+
+            {/* Input */}
+            <div className="cb-input-area">
+              <textarea
+                ref={inputRef}
+                className="cb-input"
+                placeholder="Ask about orders, customers..."
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKey}
+                rows={1}
+              />
+              <button
+                className="cb-send"
+                onClick={sendMessage}
+                disabled={!input.trim() || loading}
+                aria-label="Send message"
+              >
+                <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+                  <path d="M13.5 8H2.5M13.5 8L9 3.5M13.5 8L9 12.5" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+            <div className="cb-footer">powered by your postgres db</div>
+          </div>
+        )}
+
+        {/* Floating Bubble */}
+        <button
+          className={`cb-bubble ${open ? "open" : ""}`}
+          onClick={() => setOpen((v) => !v)}
+          aria-label="Toggle chat"
+        >
+          {!open && <div className="cb-badge" />}
+          {open ? (
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M14 4L4 14M4 4l10 10" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M17 10c0 3.866-3.134 7-7 7a6.973 6.973 0 01-3.5-.937L3 17l.937-3.5A6.973 6.973 0 013 10c0-3.866 3.134-7 7-7s7 3.134 7 7z" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </button>
+      </div>
+    </>
+  );
 }
