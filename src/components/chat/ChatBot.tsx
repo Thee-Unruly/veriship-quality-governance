@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
-const N8N_WEBHOOK_URL = "https://heavily-busy-titmouse.ngrok-free.app/webhook/rag-chat-webhook-001";
+const N8N_WEBHOOK_URL = "https://heavily-busy-titmouse.ngrok-free.app/webhook/071bc21f-7a9c-4fea-a9c6-20761235b5de/chat";
 
 function generateSessionId() {
   return "session-" + Math.random().toString(36).substring(2, 12);
@@ -238,7 +240,6 @@ export default function ChatBot() {
           border-radius: 18px;
           font-size: 14px;
           line-height: 1.6;
-          white-space: pre-wrap;
           word-break: break-word;
         }
         .cb-msg.user .cb-bubble-text {
@@ -253,6 +254,52 @@ export default function ChatBot() {
           color: hsl(210 40% 98%);
           border: 1px solid hsl(222 30% 30%);
           border-bottom-left-radius: 4px;
+        }
+
+        /* Markdown & Table Styling */
+        .cb-bubble-text p { margin: 0 0 8px 0; }
+        .cb-bubble-text p:last-child { margin-bottom: 0; }
+        .cb-bubble-text strong { color: hsl(217 91% 70%); font-weight: 600; }
+        .cb-bubble-text table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          margin: 12px 0; 
+          font-size: 13px;
+          border: 1px solid hsl(222 30% 30%);
+          border-radius: 8px;
+          overflow: hidden;
+          display: block;
+          overflow-x: auto;
+        }
+        .cb-bubble-text th { 
+          background: hsl(222 47% 15%); 
+          text-align: left; 
+          padding: 10px; 
+          border-bottom: 2px solid hsl(222 30% 35%);
+          color: hsl(215 20% 85%);
+          font-weight: 600;
+        }
+        .cb-bubble-text td { 
+          padding: 8px 10px; 
+          border-bottom: 1px solid hsl(222 30% 28%);
+          color: hsl(215 10% 80%);
+        }
+        .cb-bubble-text tr:last-child td { border-bottom: none; }
+        .cb-bubble-text tr:hover td { background: rgba(255, 255, 255, 0.03); }
+        
+        .cb-bubble-text ul, .cb-bubble-text ol { 
+          padding-left: 20px; 
+          margin: 8px 0; 
+        }
+        .cb-bubble-text li { margin-bottom: 4px; }
+        
+        .cb-bubble-text code {
+          background: hsl(222 47% 10%);
+          padding: 2px 5px;
+          border-radius: 4px;
+          font-family: 'DM Mono', monospace;
+          font-size: 0.9em;
+          color: hsl(199 89% 60%);
         }
 
         .cb-typing {
@@ -375,7 +422,11 @@ export default function ChatBot() {
             <div className="cb-messages">
               {messages.map((msg, i) => (
                 <div key={i} className={`cb-msg ${msg.role}`}>
-                  <div className="cb-bubble-text">{msg.text}</div>
+                  <div className="cb-bubble-text">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.text}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               ))}
               {loading && (
