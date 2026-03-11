@@ -403,12 +403,24 @@ export default function ChatBot() {
           <div className="cb-window" role="dialog" aria-label="Chat assistant">
             {/* Header */}
             <div className="cb-header">
-              <div className="cb-avatar">🗄️</div>
+              <div className="cb-avatar">
+                <svg width="28" height="28" viewBox="0 0 8 8" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ imageRendering: 'pixelated' }}>
+                  <rect x="1" y="0" width="6" height="1" fill="#3b1f0e" />
+                  <rect x="0" y="1" width="1" height="2" fill="#3b1f0e" />
+                  <rect x="7" y="1" width="1" height="2" fill="#3b1f0e" />
+                  <rect x="1" y="1" width="6" height="5" fill="#f5c5a3" />
+                  <rect x="2" y="3" width="1" height="1" fill="#1a1a2e" />
+                  <rect x="5" y="3" width="1" height="1" fill="#1a1a2e" />
+                  <rect x="3" y="5" width="2" height="1" fill="#c47a5a" />
+                  <rect x="3" y="6" width="2" height="1" fill="#f5c5a3" />
+                  <rect x="1" y="7" width="6" height="1" fill="#2563eb" />
+                </svg>
+              </div>
               <div className="cb-header-info">
                 <div className="cb-header-name">Amira</div>
                 <div className="cb-header-status">
                   <div className="cb-status-dot" />
-                  Connected to your database
+                  I'm Amira, your 24/7 assistant. How can I help you?
                 </div>
               </div>
               <button className="cb-close" onClick={() => setOpen(false)} aria-label="Close chat">
