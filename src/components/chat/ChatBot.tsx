@@ -5,7 +5,7 @@ import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-const N8N_WEBHOOK_URL = "https://heavily-busy-titmouse.ngrok-free.app/webhook/071bc21f-7a9c-4fea-a9c6-20761235b5de/chat";
+const N8N_WEBHOOK_URL = "https://heavily-busy-titmouse.ngrok-free.app/webhook/veriship-agent";
 
 function generateSessionId() {
   return "session-" + Math.random().toString(36).substring(2, 12);
@@ -62,7 +62,7 @@ export default function ChatBot() {
       const res = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatInput: text, sessionId }),
+        body: JSON.stringify({ message: text, sessionId }),
       });
       const data = await res.json();
       const reply =
