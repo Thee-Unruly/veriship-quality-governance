@@ -1,0 +1,5 @@
+{
+    "name": "n8n-agent",
+    "description": "Main n8n AI workflow agent",
+    "role": "agent"
+}

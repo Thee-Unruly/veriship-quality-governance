@@ -35,6 +35,19 @@ class User(Base):
     assigned_projects = relationship("Project", back_populates="assigned_users", secondary="user_project_assignment")
 
 
+class ServiceAccount(Base):
+    """Service accounts for automated agents (n8n, CI/CD bots, etc.)."""
+    __tablename__ = "service_accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), unique=True, nullable=False, index=True)  # e.g. "n8n-agent"
+    description = Column(Text, nullable=True)
+    role = Column(String(100), default="agent")  # agent, readonly, admin
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    last_used_at = Column(DateTime, nullable=True)
+
+
 class UserProjectAssignment(Base):
     """Association between users and projects."""
     __tablename__ = "user_project_assignment"
@@ -100,6 +113,7 @@ class ReleaseStatus(str, PyEnum):
     READY = "ready"
     APPROVED = "approved"
     RELEASED = "released"
+    BLOCKED = "blocked"
     ROLLBACK = "rollback"
 
 
