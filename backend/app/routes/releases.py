@@ -6,7 +6,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app.models import Release, ReleaseStatus, ReleaseApproval, TeamMember, ApprovalStatus, TestCase
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 
 router = APIRouter()
@@ -200,4 +200,100 @@ def get_release_approvals(release_id: int, db: Session = Depends(get_db)):
     
     approvals = db.query(ReleaseApproval).filter(ReleaseApproval.release_id == release_id).all()
     return approvals
+
+
+# ========== Release Approve / Reject Action ==========
+
+class ReleaseApproveRequest(BaseModel):
+    """Payload for approving or rejecting a release."""
+    approver_name: str
+    decision: str  # "approved" or "rejected"
+    comments: Optional[str] = None
+
+
+@router.post("/{release_id}/approve", response_model=ReleaseApprovalResponse)
+def approve_release(
+    release_id: int,
+    payload: ReleaseApproveRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Approve or reject a release on behalf of a named approver.
+
+    - **release_id**: The numeric ID of the release.
+    - **approver_name**: Must match the name on the pending approval record.
+    - **decision**: Either ``"approved"`` or ``"rejected"``.
+    - **comments**: Optional freetext justification.
+
+    When all approval records are resolved the release ``go_no_go_decision``
+    is set to ``"approved"`` (all approved) or ``"rejected"`` (any rejected).
+    """
+    # Validate decision value
+    decision = payload.decision.lower()
+    if decision not in ("approved", "rejected"):
+        raise HTTPException(
+            status_code=400,
+            detail="decision must be 'approved' or 'rejected'"
+        )
+
+    # Ensure the release exists
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+
+    # Find the pending approval record for this approver
+    approval = (
+        db.query(ReleaseApproval)
+        .filter(
+            ReleaseApproval.release_id == release_id,
+            ReleaseApproval.approver_name == payload.approver_name,
+            ReleaseApproval.status == ApprovalStatus.PENDING,
+        )
+        .first()
+    )
+    if not approval:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                f"No pending approval found for approver '{payload.approver_name}' "
+                f"on release {release_id}. Either the approver name is wrong, "
+                "the approval was already actioned, or this approver is not assigned."
+            ),
+        )
+
+    # Stamp the approval
+    approval.status = ApprovalStatus.APPROVED if decision == "approved" else ApprovalStatus.REJECTED
+    approval.comments = payload.comments
+    approval.approved_at = datetime.now(timezone.utc)
+
+    # Check if all approvals for this release are now resolved
+    all_approvals = (
+        db.query(ReleaseApproval)
+        .filter(ReleaseApproval.release_id == release_id)
+        .all()
+    )
+    # Include the one we just updated (not yet committed)
+    pending_count = sum(
+        1 for a in all_approvals
+        if (a.id == approval.id and approval.status == ApprovalStatus.PENDING)
+        or (a.id != approval.id and a.status == ApprovalStatus.PENDING)
+    )
+    rejected_count = sum(
+        1 for a in all_approvals
+        if (a.id == approval.id and decision == "rejected")
+        or (a.id != approval.id and a.status == ApprovalStatus.REJECTED)
+    )
+
+    if pending_count == 0:
+        # All resolved — set the release go/no-go decision
+        if rejected_count > 0:
+            release.go_no_go_decision = "rejected"
+            release.status = ReleaseStatus.BLOCKED
+        else:
+            release.go_no_go_decision = "approved"
+            release.status = ReleaseStatus.RELEASED
+
+    db.commit()
+    db.refresh(approval)
+    return approval
 

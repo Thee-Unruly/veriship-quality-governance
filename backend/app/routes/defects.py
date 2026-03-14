@@ -46,6 +46,29 @@ class DefectResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+@router.get("/all", response_model=List[DefectResponse])
+def list_all_defects(
+    severity: Optional[DefectSeverity] = None,
+    status: Optional[DefectStatus] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    List all defects across every project.
+
+    Optional query parameters:
+    - **severity**: Filter by severity (``critical``, ``high``, ``medium``, ``low``).
+    - **status**: Filter by status (``open``, ``in_progress``, ``resolved``, ``closed``).
+
+    Example n8n call: ``GET /api/defects/all?severity=critical``
+    """
+    query = db.query(Defect)
+    if severity:
+        query = query.filter(Defect.severity == severity)
+    if status:
+        query = query.filter(Defect.status == status)
+    return query.order_by(Defect.created_at.desc()).all()
+
+
 @router.get("/{project_id}", response_model=List[DefectResponse])
 def list_defects(project_id: int, db: Session = Depends(get_db)):
     """List defects for a project."""
