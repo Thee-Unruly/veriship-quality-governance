@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Defect, DefectSeverity, DefectStatus
 from app.utils import recalculate_project_status
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from typing import Optional, List
 
@@ -21,6 +21,13 @@ class DefectCreate(BaseModel):
     severity: DefectSeverity = DefectSeverity.MEDIUM
     found_by: Optional[str] = None
 
+    @field_validator("severity", mode="before")
+    @classmethod
+    def normalize_severity(cls, v):
+        if isinstance(v, str):
+            return v.lower()
+        return v
+
 
 class DefectUpdate(BaseModel):
     """Defect update schema."""
@@ -29,6 +36,13 @@ class DefectUpdate(BaseModel):
     severity: Optional[DefectSeverity] = None
     status: Optional[DefectStatus] = None
     found_by: Optional[str] = None
+
+    @field_validator("severity", "status", mode="before")
+    @classmethod
+    def normalize_enums(cls, v):
+        if isinstance(v, str):
+            return v.lower().replace(" ", "_").replace("-", "_")
+        return v
 
 
 class DefectResponse(BaseModel):

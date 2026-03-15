@@ -13,7 +13,7 @@ from app.models import (
     QAInsight,
     TeamMember,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 from typing import Optional, List
 
@@ -33,6 +33,14 @@ class ProjectUpdate(BaseModel):
     description: Optional[str] = None
     status: Optional[ProjectStatus] = None
     target_release_date: Optional[datetime] = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, v):
+        if isinstance(v, str):
+            # Handles: 'At Risk' -> 'at-risk', 'IN_PROGRESS' -> 'in-progress'
+            return v.lower().replace(" ", "-").replace("_", "-")
+        return v
 
 
 class ProjectResponse(BaseModel):

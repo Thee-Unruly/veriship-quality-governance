@@ -61,15 +61,22 @@ export default function ChatBot() {
     try {
       const res = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "ngrok-skip-browser-warning": "true" 
+        },
         body: JSON.stringify({ message: text, sessionId }),
       });
       const data = await res.json();
+      console.log("n8n Response:", data);
+
       const reply =
+        data?.response ||
+        data?.[0]?.response ||
         data?.output ||
+        data?.[0]?.output ||
         data?.text ||
         data?.message ||
-        data?.[0]?.output ||
         "Sorry, I couldn't get a response.";
 
       setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
