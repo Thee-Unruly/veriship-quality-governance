@@ -56,6 +56,10 @@ HEADERS = {
 
 mcp = FastMCP("VeriShip")
 
+# Disable strict host checking so it works inside Docker
+mcp.settings.transport_security.enable_dns_rebinding_protection = False
+mcp.settings.transport_security.allowed_hosts = ["*"]
+mcp.settings.transport_security.allowed_origins = ["*"]
 
 # ---------------------------------------------------------------------------
 # Helper
@@ -713,7 +717,7 @@ async def health_check() -> str:
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "sse":
         import uvicorn
-        app = mcp.get_streamable_http_app()
+        app = mcp.streamable_http_app()
         uvicorn.run(app, host="0.0.0.0", port=8001)
     else:
-        mcp.run()
+        mcp.run(transport="stdio")

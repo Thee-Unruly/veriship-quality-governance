@@ -1,10 +1,7 @@
 FROM python:3.11-slim
-
 WORKDIR /app
-
-RUN pip install mcp httpx pydantic-settings uvicorn starlette
-
+RUN pip install "mcp[cli]==1.26.0" httpx uvicorn
 COPY veriship_mcp.py .
-
-# Run as SSE server by default for n8n compatibility
+ENV UVICORN_HOST=0.0.0.0
+ENV UVICORN_PORT=8001
 CMD ["python", "veriship_mcp.py", "sse"]
