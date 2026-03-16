@@ -70,14 +70,16 @@ export default function ChatBot() {
       const data = await res.json();
       console.log("n8n Response:", data);
 
+      // Try every possible key that n8n/AI models use
       const reply =
-        data?.response ||
-        data?.[0]?.response ||
-        data?.output ||
-        data?.[0]?.output ||
+        data?.output || 
+        data?.response || 
         data?.text ||
-        data?.message ||
-        "Sorry, I couldn't get a response.";
+        data?.[0]?.output ||
+        data?.[0]?.response ||
+        data?.[0]?.text ||
+        (typeof data === 'string' ? data : null) ||
+        `Unknown response format. Raw data: ${JSON.stringify(data).substring(0, 100)}...`;
 
       setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
     } catch (err) {
