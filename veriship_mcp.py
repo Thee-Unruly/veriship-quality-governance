@@ -1,13 +1,16 @@
 import httpx
 from mcp.server.fastmcp import FastMCP
 
+import os
+
 # Initialize MCP Server
 mcp = FastMCP("VeriShip")
 
-# Configuration
-BASE_URL = "http://localhost:8000/api"
-# Use the token we generated earlier
-AGENT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzYToxIiwibmFtZSI6Im44bi1hZ2VudCIsInJvbGUiOiJhZ2VudCIsInR5cGUiOiJzZXJ2aWNlX2FjY291bnQifQ.KyQQCPWaVQ8zJS1sXuLJ0QVkxPVevlnb-5cJP_SUDvM"
+# Configuration from Environment Variables
+# Default to 'app' for Docker compose network
+BACKEND_HOST = os.getenv("BACKEND_HOST", "localhost")
+BASE_URL = f"http://{BACKEND_HOST}:8000/api"
+AGENT_TOKEN = os.getenv("AGENT_TOKEN", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJzYToxIiwibmFtZSI6Im44bi1hZ2VudCIsInJvbGUiOiJhZ2VudCIsInR5cGUiOiJzZXJ2aWNlX2FjY291bnQifQ.KyQQCPWaVQ8zJS1sXuLJ0QVkxPVevlnb-5cJP_SUDvM")
 
 headers = {
     "Authorization": f"Bearer {AGENT_TOKEN}",
@@ -50,4 +53,12 @@ async def get_dashboard_metrics() -> str:
         return response.text
 
 if __name__ == "__main__":
-    mcp.run()
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "sse":
+        import uvicorn
+        from mcp.server.fastmcp import FastMCP
+        # Get the starlette app from FastMCP
+        app = mcp.get_streamable_http_app()
+        uvicorn.run(app, host="0.0.0.0", port=8001)
+    else:
+        mcp.run()

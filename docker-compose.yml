@@ -79,6 +79,21 @@ services:
     networks:
       - veriship-network
 
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: veriship-mcp
+    environment:
+      BACKEND_HOST: app
+      # AGENT_TOKEN is already baked in but can be overridden here
+    ports:
+      - "8001:8001"
+    depends_on:
+      - app
+    networks:
+      - veriship-network
+
 volumes:
   postgres_data:
 
