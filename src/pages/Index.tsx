@@ -13,7 +13,9 @@ import {
   CheckSquare,
   Bug,
   Rocket,
+  RefreshCw,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Metrics {
   total_requirements: number;
@@ -172,9 +174,15 @@ export default function Index() {
               Enterprise-wide quality intelligence and release governance
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground">
-            <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-            Last updated: {Math.round((Date.now() - lastUpdated.getTime()) / 1000)}s ago
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground mt-1">
+              <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
+              Last updated: {Math.round((Date.now() - lastUpdated.getTime()) / 1000)}s ago
+            </div>
+            <Button onClick={() => { setLoading(true); fetchData(); }} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
           </div>
         </div>
 

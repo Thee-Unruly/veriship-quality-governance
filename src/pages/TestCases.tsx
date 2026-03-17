@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckSquare, Plus, Trash2, Edit2, Info, Play } from "lucide-react";
+import { CheckSquare, Plus, Trash2, Edit2, Info, Play, RefreshCw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateTestCaseModal } from "@/components/modals/CreateTestCaseModal";
 import { EditTestCaseModal } from "@/components/modals/EditTestCaseModal";
@@ -132,6 +132,18 @@ export default function TestCases() {
     fetchTestCases();
   }, [currentTab]);
 
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      await refresh();
+      fetchRequirements();
+      fetchTestCases();
+    } catch (e) {
+      fetchRequirements();
+      fetchTestCases();
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this test case?")) {
       await deleteTestCase(id);
@@ -204,10 +216,16 @@ export default function TestCases() {
             <h1 className="text-3xl font-bold text-foreground">Test Cases</h1>
             <p className="text-muted-foreground">Design, execute, and manage test cases</p>
           </div>
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Test Case
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleRefresh} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Test Case
+            </Button>
+          </div>
         </div>
 
         <div className="mb-4">

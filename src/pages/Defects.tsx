@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bug, Plus, Trash2, Edit2 } from "lucide-react";
+import { Bug, Plus, Trash2, Edit2, RefreshCw } from "lucide-react";
 import { CreateDefectModal } from "@/components/modals/CreateDefectModal";
 import { EditDefectModal } from "@/components/modals/EditDefectModal";
 import { useCrud } from "@/hooks/use-crud";
@@ -115,6 +115,16 @@ export default function Defects() {
     }
   }, []);
 
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      await refresh();
+      fetchDefects();
+    } catch (e) {
+      fetchDefects();
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this defect?")) {
       await deleteDefect(id);
@@ -151,10 +161,16 @@ export default function Defects() {
             <h1 className="text-3xl font-bold text-foreground">Defects</h1>
             <p className="text-muted-foreground">Track and manage defects across projects</p>
           </div>
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Defect
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleRefresh} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Defect
+            </Button>
+          </div>
         </div>
 
         <div className="mb-4">

@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, Trash2, Edit2, Sparkles, Loader2, Beaker, Play } from "lucide-react";
+import { FileText, Plus, Trash2, Edit2, Sparkles, Loader2, Beaker, Play, RefreshCw } from "lucide-react";
 import { CreateRequirementModal } from "@/components/modals/CreateRequirementModal";
 import { EditRequirementModal } from "@/components/modals/EditRequirementModal";
 import { GeneratedTestsModal } from "@/components/modals/GeneratedTestsModal";
@@ -133,6 +133,16 @@ export default function Requirements() {
     }
   }, []);
 
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      await refresh();
+      fetchRequirements();
+    } catch (e) {
+      fetchRequirements();
+    }
+  };
+
   const handleDelete = async (id: number) => {
     if (confirm("Are you sure you want to delete this requirement?")) {
       await deleteRequirement(id);
@@ -166,9 +176,15 @@ export default function Requirements() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Requirements</h1>
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" /> New Requirement
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={handleRefresh} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> New Requirement
+            </Button>
+          </div>
         </div>
 
         {/* Project filter dropdown */}
