@@ -27,7 +27,7 @@ export default function ChatBot() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      text: "Hi! 👋 Ask me anything about your quality governance, projects, or releases.",
+      text: "Hi! 👋 I'm your QA Assistant. Need help finding defects, analyzing requirements, or reviewing test coverage?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -429,7 +429,7 @@ export default function ChatBot() {
                 <div className="cb-header-name">Amira</div>
                 <div className="cb-header-status">
                   <div className="cb-status-dot" />
-                  I'm Amira, your 24/7 assistant. How can I help you?
+                  I'm your QA assistant. How can I help you test today?
                 </div>
               </div>
               <button className="cb-close" onClick={() => setOpen(false)} aria-label="Close chat">
@@ -465,7 +465,7 @@ export default function ChatBot() {
               <textarea
                 ref={inputRef}
                 className="cb-input"
-                placeholder="Ask about orders, customers..."
+                placeholder="Ask about bugs, test cases, or projects..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKey}
