@@ -5,8 +5,8 @@ import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-// Updated n8n Q&A workflow Webhook (Test Endpoint)
-const N8N_WEBHOOK_URL = "https://heavily-busy-titmouse.ngrok-free.app/webhook-test/veriship-qa-chatbot";
+// Updated n8n Q&A workflow Webhook (Production Endpoint)
+const N8N_WEBHOOK_URL = "https://heavily-busy-titmouse.ngrok-free.app/webhook/veriship-qa-chatbot";
 
 function generateSessionId() {
   return "session-" + Math.random().toString(36).substring(2, 12);

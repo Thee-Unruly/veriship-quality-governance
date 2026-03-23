@@ -16,6 +16,7 @@ import Playwright from "./pages/Playwright";
 import LoadTesting from "./pages/LoadTesting";
 // Analytics, Compliance, and Team pages removed
 import Settings from "./pages/Settings";
+import Copilot from "./pages/Copilot";
 import CopilotGuide from "./pages/CopilotGuide";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
@@ -64,6 +65,7 @@ const App = () => {
             <Route path="/projects/:id" element={<ProtectedRoute element={<Projects />} />} />
 
             <Route path="/requirements" element={<ProtectedRoute element={<Requirements />} />} />
+            <Route path="/copilot" element={<ProtectedRoute element={<Copilot />} />} />
             <Route path="/help/copilot" element={<ProtectedRoute element={<CopilotGuide />} />} />
             <Route path="/ai-insights" element={<ProtectedRoute element={<AIInsightsPage />} />} />
             <Route path="/test-cases" element={<ProtectedRoute element={<TestCases />} />} />
