@@ -21,6 +21,54 @@ from app.models import QAInsight, Project
 router = APIRouter()
 
 
+def call_openrouter_with_fallback(user_message: str, db: Session = None, endpoint: str = "copilot") -> str:
+    """Enhanced OpenRouter call with key rotation/fallback and centralized error handling."""
+    # Persist prompt if db provided
+    if db:
+        try:
+            db_prompt = CopilotPrompt(endpoint=endpoint, prompt_text=user_message)
+            db.add(db_prompt)
+            db.commit()
+            db.refresh(db_prompt)
+        except Exception:
+            db.rollback()
+
+    # Try keys in order of specialization
+    keys = [
+        settings.openrouter_clarity_api_key,
+        settings.openrouter_testcase_api_key,
+        settings.openrouter_trial_api_key,
+        settings.openrouter_api_key,
+    ]
+    
+    # Filter out empty keys and remove duplicates while preserving order
+    seen = set()
+    active_keys = [x for x in keys if x and not (x in seen or seen.add(x))]
+    
+    if not active_keys:
+        raise HTTPException(
+            status_code=400, 
+            detail="OpenRouter API key not configured. Please set OPENROUTER_API_KEY in your .env."
+        )
+
+    last_exc = None
+    for key in active_keys:
+        try:
+            return call_openrouter(key, user_message)
+        except HTTPException as e:
+            # If it's a rate limit (429), try the next key
+            if e.status_code == 429:
+                last_exc = e
+                continue
+            # For other errors (401, 400, etc.), propagate immediately as they are likely configuration issues
+            raise e
+    
+    if last_exc:
+        raise last_exc
+    
+    raise HTTPException(status_code=500, detail="Failed to get response from AI provider after trying all keys.")
+
+
 def call_openrouter(api_key: str, user_message: str) -> str:
     """Call OpenRouter API with error handling and retry logic."""
     max_retries = 3
@@ -119,48 +167,13 @@ Provide a JSON response with these exact keys:
 Only respond with valid JSON, no additional text."""
 
     try:
-        # persist prompt for audit/debug
-        try:
-            db_prompt = CopilotPrompt(endpoint="analyze_requirement_clarity", prompt_text=prompt)
-            db.add(db_prompt)
-            db.commit()
-            db.refresh(db_prompt)
-        except Exception:
-            db.rollback()
-
-        # Try the configured clarity key first, then fall back to other OpenRouter keys
-        ai_response = None
-        last_http_exc = None
-        openrouter_keys = [
-            settings.openrouter_clarity_api_key,
-            settings.openrouter_testcase_api_key,
-            settings.openrouter_trial_api_key,
-        ]
-
-        for key in openrouter_keys:
-            if not key:
-                continue
-            try:
-                ai_response = call_openrouter(key, prompt)
-                break
-            except HTTPException as e:
-                # If it's a rate limit (429), try the next key; otherwise propagate
-                if e.status_code == 429:
-                    last_http_exc = e
-                    continue
-                raise
-
-        if ai_response is None:
-            if last_http_exc:
-                raise last_http_exc
-            raise HTTPException(status_code=400, detail="OpenRouter API key not configured or all keys failed.")
+        ai_response = call_openrouter_with_fallback(prompt, db=db, endpoint="analyze_requirement_clarity")
         
-        # Extract JSON from response (sometimes models add extra text)
+        # Robust JSON extraction
         json_start = ai_response.find('{')
         json_end = ai_response.rfind('}') + 1
         if json_start != -1 and json_end > json_start:
-            json_str = ai_response[json_start:json_end]
-            analysis_data = json.loads(json_str)
+            analysis_data = json.loads(ai_response[json_start:json_end])
         else:
             analysis_data = json.loads(ai_response)
         
@@ -228,32 +241,13 @@ Return a JSON response with this exact structure:
 Generate at least 3-5 test cases. Only respond with valid JSON, no additional text."""
 
     try:
-        # persist prompt
-        try:
-            db_prompt = CopilotPrompt(endpoint="generate_test_cases", prompt_text=prompt)
-            db.add(db_prompt)
-            db.commit()
-            db.refresh(db_prompt)
-        except Exception:
-            db.rollback()
-
-        if not settings.openrouter_testcase_api_key:
-            raise HTTPException(
-                status_code=400,
-                detail="OpenRouter Test Case API key not configured. Please set OPENROUTER_TESTCASE_API_KEY (or OPENROUTER_API_KEY)."
-            )
-
-        ai_response = call_openrouter(
-            settings.openrouter_testcase_api_key,
-            prompt
-        )
+        ai_response = call_openrouter_with_fallback(prompt, db=db, endpoint="generate_test_cases")
         
-        # Extract JSON from response
+        # Robust JSON extraction
         json_start = ai_response.find('{')
         json_end = ai_response.rfind('}') + 1
         if json_start != -1 and json_end > json_start:
-            json_str = ai_response[json_start:json_end]
-            result_data = json.loads(json_str)
+            result_data = json.loads(ai_response[json_start:json_end])
         else:
             result_data = json.loads(ai_response)
         
@@ -313,19 +307,13 @@ Requirement (if provided):
 Generate exactly {count} distinct scenarios. Return ONLY valid JSON, no extra text."""
 
     try:
-        # Use OpenRouter API key for Gemma model (dedicated trial key for test runner)
-        openrouter_key = settings.openrouter_trial_api_key or settings.openrouter_testcase_api_key or settings.openrouter_clarity_api_key
-        if not openrouter_key:
-            raise HTTPException(status_code=400, detail="OpenRouter API key not configured. Set openrouter_trial_api_key, openrouter_testcase_api_key, or openrouter_clarity_api_key in your .env.")
+        ai_text = call_openrouter_with_fallback(prompt, db=db, endpoint="generate_scenarios")
 
-        ai_text = call_openrouter(openrouter_key, prompt)
-
-        # Extract JSON object from model output
+        # Robust JSON extraction
         json_start = ai_text.find('{')
         json_end = ai_text.rfind('}') + 1
         if json_start != -1 and json_end > json_start:
-            json_str = ai_text[json_start:json_end]
-            result = json.loads(json_str)
+            result = json.loads(ai_text[json_start:json_end])
         else:
             result = json.loads(ai_text)
 
@@ -407,32 +395,13 @@ Provide a JSON response with:
 Only respond with valid JSON, no additional text."""
 
     try:
-        # persist prompt
-        try:
-            db_prompt = CopilotPrompt(endpoint="check_release_readiness", prompt_text=prompt)
-            db.add(db_prompt)
-            db.commit()
-            db.refresh(db_prompt)
-        except Exception:
-            db.rollback()
-
-        if not settings.openrouter_clarity_api_key:
-            raise HTTPException(
-                status_code=400,
-                detail="OpenRouter Clarity API key not configured (used for release checking). Please set OPENROUTER_CLARITY_API_KEY (or OPENROUTER_API_KEY)."
-            )
-
-        ai_response = call_openrouter(
-            settings.openrouter_clarity_api_key,  # Reuse clarity key for release analysis
-            prompt
-        )
+        ai_response = call_openrouter_with_fallback(prompt, db=db, endpoint="check_release_readiness")
         
-        # Extract JSON from response
+        # Robust JSON extraction
         json_start = ai_response.find('{')
         json_end = ai_response.rfind('}') + 1
         if json_start != -1 and json_end > json_start:
-            json_str = ai_response[json_start:json_end]
-            analysis_data = json.loads(json_str)
+            analysis_data = json.loads(ai_response[json_start:json_end])
         else:
             analysis_data = json.loads(ai_response)
         
@@ -625,17 +594,8 @@ def get_ai_insights(db: Session = Depends(get_db)):
 
             prompt = "Generate a small list (3-6) of actionable AI insights for a dashboard based on these project summaries. Return JSON array with objects having keys: id, type (warning|suggestion|info), title, description, action (optional), project. Only return JSON.\n\n" + "\n".join(proj_summaries)
 
-            # persist prompt for insights
-            try:
-                db_prompt = CopilotPrompt(endpoint="insights", prompt_text=prompt)
-                db.add(db_prompt)
-                db.commit()
-                db.refresh(db_prompt)
-            except Exception:
-                db.rollback()
-
-            ai_response = call_openrouter(settings.openrouter_clarity_api_key, prompt)
-            # Extract JSON array
+            ai_response = call_openrouter_with_fallback(prompt, db=db, endpoint="insights")
+            # Robust JSON extraction
             json_start = ai_response.find('[')
             json_end = ai_response.rfind(']') + 1
             if json_start != -1 and json_end > json_start:

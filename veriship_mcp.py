@@ -42,12 +42,12 @@ BACKEND_HOST = os.getenv("BACKEND_HOST", "localhost")
 BACKEND_PORT = os.getenv("BACKEND_PORT", "8000")
 BASE_URL = f"http://{BACKEND_HOST}:{BACKEND_PORT}/api"
 
-AGENT_TOKEN = os.getenv(
-    "AGENT_TOKEN",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-    ".eyJzdWIiOiJzYToxIiwibmFtZSI6Im44bi1hZ2VudCIsInJvbGUiOiJhZ2VudCIsInR5cGUiOiJzZXJ2aWNlX2FjY291bnQifQ"
-    ".KyQQCPWaVQ8zJS1sXuLJ0QVkxPVevlnb-5cJP_SUDvM",
-)
+AGENT_TOKEN = os.getenv("AGENT_TOKEN")
+
+if not AGENT_TOKEN:
+    print("[WARN] AGENT_TOKEN is not set. All MCP tool calls requiring authentication will fail.")
+    # For dev convenience, we can allow it to boot, but warn loudly
+    # In a stricter environment, we might want to sys.exit(1)
 
 HEADERS = {
     "Authorization": f"Bearer {AGENT_TOKEN}",

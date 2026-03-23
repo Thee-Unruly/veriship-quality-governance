@@ -1,19 +1,11 @@
-"""
-AI-powered testing utilities using OpenRouter API
-OpenRouter provides access to Claude, GPT-4, Llama, Mistral, and more with a single API key
-"""
-
-import os
 import json
-from typing import Optional
+import time
+from typing import Optional, List, Dict, Any
 import httpx
 from pydantic import BaseModel
+from app.config import settings
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-DEFAULT_MODEL = "claude-3-sonnet"  # Can switch to: gpt-4, gpt-3.5-turbo, mistral-medium, llama-2-70b
-
-
+# Models to move things forward
 class TestStepRequest(BaseModel):
     test_description: str
     context: str = "Web application testing"
@@ -28,40 +20,79 @@ class GeneratedTestStep(BaseModel):
 
 
 class TestStepsResponse(BaseModel):
-    steps: list[GeneratedTestStep]
+    steps: List[GeneratedTestStep]
     prompt_used: str
+
+
+async def call_openrouter_async(user_message: str, model: str = None) -> str:
+    """Async helper to call OpenRouter API with error handling and retry logic."""
+    if not settings.openrouter_api_key:
+        raise ValueError(
+            "OpenRouter API key not configured. "
+            "Get a key at https://openrouter.ai and add to .env"
+        )
+    
+    max_retries = 3
+    retry_delay = 2  # seconds
+    target_model = model or settings.openrouter_model
+    
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        for attempt in range(max_retries):
+            try:
+                response = await client.post(
+                    f"https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {settings.openrouter_api_key}",
+                        "HTTP-Referer": settings.openrouter_site_url,
+                        "X-Title": settings.openrouter_site_name,
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": target_model,
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": user_message
+                            }
+                        ],
+                        "temperature": 0.7,
+                        "max_tokens": 2048,
+                    }
+                )
+                
+                # Handle rate limiting with retry
+                if response.status_code == 429:
+                    if attempt < max_retries - 1:
+                        wait_time = retry_delay * (2 ** attempt)
+                        print(f"[AI] Rate limited (429). Retrying in {wait_time}s... (Attempt {attempt + 1}/{max_retries})")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        raise Exception("OpenRouter API rate limit exceeded after retries.")
+                
+                if response.status_code != 200:
+                    raise Exception(f"OpenRouter API error ({response.status_code}): {response.text}")
+                
+                result = response.json()
+                return result["choices"][0]["message"]["content"]
+                
+            except httpx.RequestError as e:
+                if attempt < max_retries - 1:
+                    print(f"[AI] Request failed: {str(e)}. Retrying in {retry_delay}s...")
+                    time.sleep(retry_delay)
+                    continue
+                else:
+                    raise Exception(f"Failed to call OpenRouter API after {max_retries} attempts: {str(e)}")
 
 
 async def generate_test_steps_openrouter(
     test_description: str,
     context: str = "Web application testing",
-    model: str = DEFAULT_MODEL
+    model: str = None
 ) -> TestStepsResponse:
     """
-    Generate test steps using OpenRouter API
-    
-    Supports multiple models:
-    - claude-3-sonnet (recommended, fast & cheap)
-    - gpt-4
-    - gpt-3.5-turbo
-    - mistral-medium
-    - llama-2-70b
-    
-    Args:
-        test_description: Description of the test case
-        context: Additional context about the application
-        model: Which model to use (defaults to claude-3-sonnet)
-    
-    Returns:
-        TestStepsResponse with generated steps
+    Generate test steps using OpenRouter API with robust parsing and error handling.
     """
-    
-    if not OPENROUTER_API_KEY:
-        raise ValueError(
-            "OPENROUTER_API_KEY not set. "
-            "Get a free key at https://openrouter.ai and add to .env"
-        )
-    
     prompt = f"""You are an expert QA engineer. Generate detailed Playwright test steps for the following test case:
 
 Test Description: {test_description}
@@ -76,27 +107,7 @@ Generate test steps in JSON format with this exact structure:
     "expected_result": "Page loaded successfully",
     "description": "Navigate to the application home page"
   }},
-  {{
-    "step_number": 2,
-    "action": "click",
-    "selector": "button[id='login-btn']",
-    "expected_result": "Login dialog appears",
-    "description": "Click the login button"
-  }},
-  {{
-    "step_number": 3,
-    "action": "type",
-    "selector": "input[name='username']",
-    "expected_result": "Username entered",
-    "description": "Enter test username"
-  }},
-  {{
-    "step_number": 4,
-    "action": "assert",
-    "selector": "div.success-message",
-    "expected_result": "Success message visible",
-    "description": "Verify success message is displayed"
-  }}
+  ...
 ]
 
 Important:
@@ -106,70 +117,63 @@ Important:
 - Return ONLY valid JSON array, no markdown, no code blocks, no extra text
 - Each step must have all required fields"""
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            f"{OPENROUTER_BASE_URL}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "HTTP-Referer": "http://localhost:3000",
-                "X-Title": "VeriShip QA Platform",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": model,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                "temperature": 0.7,
-                "max_tokens": 2048,
-            },
-            timeout=60.0
-        )
+    content = await call_openrouter_async(prompt, model=model)
     
-    if response.status_code != 200:
-        error_details = response.text
-        raise Exception(f"OpenRouter API error ({response.status_code}): {error_details}")
-    
-    result = response.json()
-    content = result["choices"][0]["message"]["content"]
-    
-    # Parse JSON response
+    # Robust JSON extraction
     try:
-        steps_data = json.loads(content)
+        json_start = content.find('[')
+        json_end = content.rfind(']') + 1
+        if json_start != -1 and json_end > json_start:
+            json_str = content[json_start:json_end]
+            steps_data = json.loads(json_str)
+        else:
+            steps_data = json.loads(content)
+            
         steps = [GeneratedTestStep(**step) for step in steps_data]
         return TestStepsResponse(steps=steps, prompt_used=prompt)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Failed to parse OpenRouter response as JSON: {content}\nError: {e}")
+    except (json.JSONDecodeError, ValueError) as e:
+        raise ValueError(f"Failed to parse OpenRouter response as JSON: {content[:100]}...\nError: {e}")
+
+
+def extract_suggestions(text: str) -> List[str]:
+    """
+    Extract numbered or bulleted suggestions from AI response text
+    """
+    lines = text.split('\n')
+    suggestions = []
+    
+    for line in lines:
+        line = line.strip()
+        if line and (line[0].isdigit() or line.startswith('•') or line.startswith('-') or line.startswith('*')):
+            # Remove numbering/bullets/dashes and leading whitespace
+            suggestion = line.lstrip('0123456789.-•*) ').strip()
+            if suggestion and len(suggestion) > 5:  # Filter out empty/short lines
+                suggestions.append(suggestion)
+    
+    return suggestions[:3]  # Return max 3 suggestions
+
+
+def check_api_configuration() -> Dict[str, Any]:
+    """Check if OpenRouter API is properly configured via settings."""
+    return {
+        "configured": bool(settings.openrouter_api_key),
+        "api_key_present": bool(settings.openrouter_api_key),
+        "base_url": "https://openrouter.ai/api/v1",
+        "default_model": settings.openrouter_model,
+        "message": "OpenRouter API is configured" if settings.openrouter_api_key 
+                   else "OPENROUTER_API_KEY environment variable not set",
+    }
 
 
 async def analyze_test_failure(
     test_case_title: str,
     error_message: str,
     steps_executed: int,
-    model: str = DEFAULT_MODEL,
-) -> dict:
+    model: str = None,
+) -> Dict[str, Any]:
     """
-    Use OpenRouter AI to analyze test failures and suggest fixes
-    
-    Args:
-        test_case_title: Name of the test that failed
-        error_message: Error/exception message from the failure
-        steps_executed: Number of steps that ran before failure
-        model: Which model to use (defaults to claude-3-sonnet)
-    
-    Returns:
-        Dictionary with analysis and suggestions
+    Use OpenRouter AI to analyze test failures and suggest fixes.
     """
-    
-    if not OPENROUTER_API_KEY:
-        return {
-            "analysis": "OpenRouter API not configured. Get key at https://openrouter.ai",
-            "suggestions": [],
-        }
-    
     prompt = f"""A test case failed. Analyze the failure and suggest fixes:
 
 Test Name: {test_case_title}
@@ -183,42 +187,17 @@ Please provide:
 
 Keep the response concise and practical."""
 
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            f"{OPENROUTER_BASE_URL}/chat/completions",
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "HTTP-Referer": "http://localhost:3000",
-                "X-Title": "VeriShip QA Platform",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": model,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
-                "temperature": 0.5,
-                "max_tokens": 512,
-            },
-            timeout=30.0
-        )
-    
-    if response.status_code != 200:
+    try:
+        content = await call_openrouter_async(prompt, model=model)
         return {
-            "analysis": f"API error occurred: {response.status_code}",
+            "analysis": content,
+            "suggestions": extract_suggestions(content),
+        }
+    except Exception as e:
+        return {
+            "analysis": f"Error during AI analysis: {str(e)}",
             "suggestions": [],
         }
-    
-    result = response.json()
-    content = result["choices"][0]["message"]["content"]
-    
-    return {
-        "analysis": content,
-        "suggestions": extract_suggestions(content),
-    }
 
 
 def extract_suggestions(text: str) -> list[str]:
