@@ -5,7 +5,9 @@ import { useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-const N8N_WEBHOOK_URL = "https://heavily-busy-titmouse.ngrok-free.app/webhook/veriship-agent";
+// Updated n8n Q&A workflow URL
+const N8N_WEBHOOK_URL = "https://heavily-busy-titmouse.ngrok-free.app/workflow/UDR7cZ64kGaAv9EC";
+// Legacy Agent URL: https://heavily-busy-titmouse.ngrok-free.app/webhook/veriship-agent
 
 function generateSessionId() {
   return "session-" + Math.random().toString(36).substring(2, 12);
@@ -27,7 +29,7 @@ export default function ChatBot() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      text: "Hi! 👋 I'm your QA Assistant. Need help finding defects, analyzing requirements, or reviewing test coverage?",
+      text: "Hi! 👋 I'm your VeriBot Q&A Assistant. Ask me anything about VeriShip's quality data or project status.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -426,10 +428,10 @@ export default function ChatBot() {
                 </svg>
               </div>
               <div className="cb-header-info">
-                <div className="cb-header-name">Amira</div>
+                <div className="cb-header-name">VeriBot Q&A</div>
                 <div className="cb-header-status">
                   <div className="cb-status-dot" />
-                  I'm your QA assistant. How can I help you test today?
+                  Your dedicated Q&A Agent
                 </div>
               </div>
               <button className="cb-close" onClick={() => setOpen(false)} aria-label="Close chat">
