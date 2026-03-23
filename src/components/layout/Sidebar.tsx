@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Dispatch, SetStateAction } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -19,6 +19,7 @@ import {
   Play,
   Globe,
   Zap,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -40,8 +41,12 @@ const adminNavigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+interface AppSidebarProps {
+  collapsed: boolean;
+  setCollapsed: Dispatch<SetStateAction<boolean>>;
+}
+
+export function AppSidebar({ collapsed, setCollapsed }: AppSidebarProps) {
   const [qaManagementOpen, setQaManagementOpen] = useState(true);
   const [automatedTestingOpen, setAutomatedTestingOpen] = useState(true);
   const location = useLocation();
@@ -93,179 +98,211 @@ export function Sidebar() {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-3">
-          {/* Dashboard */}
-          <div className="space-y-1 mb-4">
-            <Link
-              to="/"
-              className={cn(
-                "nav-item",
-                location.pathname === "/" && "nav-item-active"
-              )}
-            >
-              <LayoutDashboard className="h-5 w-5 flex-shrink-0" />
-              {!collapsed && <span>Dashboard</span>}
-            </Link>
-          </div>
-
-          {/* QA Management Section */}
-          {!collapsed && (
-            <div className="mb-4">
-              <button
-                onClick={() => setQaManagementOpen(!qaManagementOpen)}
-                className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-muted hover:text-sidebar-foreground transition-colors"
-              >
-                <span>QA Management</span>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 transition-transform",
-                    qaManagementOpen && "rotate-180"
-                  )}
-                />
-              </button>
-              {qaManagementOpen && (
-                <div className="mt-1 space-y-1">
-                  {qaManagementNav.map((item) => {
-                    const isActive = location.pathname === item.href;
-                    return (
-                      <Link
-                        key={item.name}
-                        to={item.href}
-                        className={cn(
-                          "nav-item",
-                          isActive && "nav-item-active"
-                        )}
-                      >
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
-                        <span>{item.name}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Automated Testing Section */}
-          {!collapsed && (
-            <div className="mb-4">
-              <button
-                onClick={() => setAutomatedTestingOpen(!automatedTestingOpen)}
-                className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-muted hover:text-sidebar-foreground transition-colors"
-              >
-                <span>Automated Testing</span>
-                <ChevronDown
-                  className={cn(
-                    "h-4 w-4 transition-transform",
-                    automatedTestingOpen && "rotate-180"
-                  )}
-                />
-              </button>
-              {automatedTestingOpen && (
-                <div className="mt-1 space-y-1">
-                  {automatedTestingNav.map((item) => {
-                    const isActive = location.pathname === item.href;
-                    return (
-                      <Link
-                        key={item.name}
-                        to={item.href}
-                        className={cn(
-                          "nav-item",
-                          isActive && "nav-item-active"
-                        )}
-                      >
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
-                        <span>{item.name}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Collapsed state - show all items */}
-          {collapsed && (
-            <div className="space-y-1">
-              {[...qaManagementNav, ...automatedTestingNav].map((item) => {
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={cn(
-                      "nav-item justify-center",
-                      isActive && "nav-item-active"
-                    )}
-                  >
-                    <item.icon className="h-5 w-5" />
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-
-          {/* AI Assistant */}
-          {!collapsed && (
-            <div className="mt-6">
-              <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-muted">
-                AI Assistant
+        <nav className="flex-1 overflow-y-auto p-3 scrollbar-hide">
+          {collapsed ? (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                {[...qaManagementNav, ...automatedTestingNav].map((item) => {
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={cn(
+                        "nav-item justify-center",
+                        isActive && "nav-item-active"
+                      )}
+                    >
+                      <item.icon className="h-5 w-5" />
+                    </Link>
+                  );
+                })}
               </div>
-              <Link
-                to="/help/copilot"
-                className={cn(
-                  "nav-item w-full group",
-                  location.pathname === "/help/copilot" && "nav-item-active"
+              
+              <div className="border-t border-sidebar-border pt-4 space-y-1">
+                <Link
+                  to="/copilot"
+                  className={cn(
+                    "nav-item justify-center",
+                    location.pathname === "/copilot" && "nav-item-active"
+                  )}
+                >
+                  <Bot className="h-5 w-5 text-sidebar-primary" />
+                </Link>
+                {adminNavigation.map((item) => {
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      className={cn(
+                        "nav-item justify-center",
+                        isActive && "nav-item-active"
+                      )}
+                    >
+                      <item.icon className="h-5 w-5" />
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Dashboard */}
+              <div className="space-y-1 mb-4">
+                <Link
+                  to="/"
+                  className={cn(
+                    "nav-item",
+                    location.pathname === "/" && "nav-item-active"
+                  )}
+                >
+                  <LayoutDashboard className="h-5 w-5 flex-shrink-0" />
+                  <span>Dashboard</span>
+                </Link>
+              </div>
+
+              {/* QA Management Section */}
+              <div className="mb-4">
+                <button
+                  onClick={() => setQaManagementOpen(!qaManagementOpen)}
+                  className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-muted hover:text-sidebar-foreground transition-colors"
+                >
+                  <span>QA Management</span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-transform",
+                      qaManagementOpen && "rotate-180"
+                    )}
+                  />
+                </button>
+                {qaManagementOpen && (
+                  <div className="mt-1 space-y-1">
+                    {qaManagementNav.map((item) => {
+                      const isActive = location.pathname === item.href;
+                      return (
+                        <Link
+                          key={item.name}
+                          to={item.href}
+                          className={cn(
+                            "nav-item",
+                            isActive && "nav-item-active"
+                          )}
+                        >
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                          <span>{item.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
                 )}
-              >
-                <div className="relative">
-                  <Sparkles className="h-5 w-5 text-sidebar-primary" />
-                </div>
-                <span className="text-sidebar-foreground">Copilot Guide</span>
-              </Link>
-            </div>
-          )}
-
-          {/* Admin Section */}
-          <div className="mt-6">
-            {!collapsed && (
-              <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-muted">
-                Administration
               </div>
-            )}
-            <div className="space-y-1">
-              {adminNavigation.map((item) => {
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
+
+              {/* Automated Testing Section */}
+              <div className="mb-4">
+                <button
+                  onClick={() => setAutomatedTestingOpen(!automatedTestingOpen)}
+                  className="flex w-full items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wider text-sidebar-muted hover:text-sidebar-foreground transition-colors"
+                >
+                  <span>Automated Testing</span>
+                  <ChevronDown
                     className={cn(
-                      "nav-item",
-                      isActive && "nav-item-active"
+                      "h-4 w-4 transition-transform",
+                      automatedTestingOpen && "rotate-180"
+                    )}
+                  />
+                </button>
+                {automatedTestingOpen && (
+                  <div className="mt-1 space-y-1">
+                    {automatedTestingNav.map((item) => {
+                      const isActive = location.pathname === item.href;
+                      return (
+                        <Link
+                          key={item.name}
+                          to={item.href}
+                          className={cn(
+                            "nav-item",
+                            isActive && "nav-item-active"
+                          )}
+                        >
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                          <span>{item.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* AI Assistant Section */}
+              <div className="mt-6">
+                <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-muted">
+                  AI Assistant
+                </div>
+                <div className="space-y-1">
+                  <Link
+                    to="/copilot"
+                    className={cn(
+                      "nav-item w-full group",
+                      location.pathname === "/copilot" && "nav-item-active"
                     )}
                   >
-                    <item.icon className="h-5 w-5 flex-shrink-0" />
-                    {!collapsed && <span>{item.name}</span>}
+                    <Bot className="h-5 w-5 text-sidebar-primary" />
+                    <span className="text-sidebar-foreground">Agent Copilot</span>
                   </Link>
-                );
-              })}
-            </div>
-          </div>
+                  <Link
+                    to="/help/copilot"
+                    className={cn(
+                      "nav-item w-full group",
+                      location.pathname === "/help/copilot" && "nav-item-active"
+                    )}
+                  >
+                    <Sparkles className="h-5 w-5 text-sidebar-primary" />
+                    <span className="text-sidebar-foreground">Copilot Guide</span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Admin Section */}
+              <div className="mt-6">
+                <div className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-muted">
+                  Administration
+                </div>
+                <div className="space-y-1">
+                  {adminNavigation.map((item) => {
+                    const isActive = location.pathname === item.href;
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        className={cn(
+                          "nav-item",
+                          isActive && "nav-item-active"
+                        )}
+                      >
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
+                        <span>{item.name}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </nav>
 
         {/* Collapse Toggle */}
         <div className="border-t border-sidebar-border p-3">
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="nav-item w-full justify-center"
+            className="nav-item w-full justify-center group"
           >
             {collapsed ? (
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
             ) : (
               <>
-                <ChevronLeft className="h-5 w-5" />
-                <span>Collapse</span>
+                <ChevronLeft className="h-5 w-5 transition-transform group-hover:-translate-x-0.5" />
+                <span>Collapse Sidebar</span>
               </>
             )}
           </button>
@@ -274,3 +311,4 @@ export function Sidebar() {
     </aside>
   );
 }
+
