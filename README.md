@@ -1,67 +1,95 @@
 # VeriShip - Enterprise QA Intelligence & Release Governance
 
-An intelligent quality assurance platform for enterprise software teams. VeriShip provides real-time visibility into requirements QA, test design & execution, defect intelligence, and release readiness across all projects.
+An intelligent quality assurance platform for enterprise software teams. VeriShip provides real-time visibility into requirements QA, test design & execution, defect intelligence, and release governance across all projects.
 
-## Key Features
+## 🚀 Key Features
 
-- **Requirements QA** - AI-powered analysis of requirement clarity, traceability, and testability
-- **Test Design & Execution** - Test case management with automation tracking and execution metrics
-- **Defect Intelligence** - Smart defect tracking with risk scoring and recurrence prediction
-- **Release Governance** - Automated release readiness assessment and approval workflows
-- **Real-time Dashboard** - Live metrics on quality coverage, risk scores, and team activity
-- **AI Insights** - Machine learning-powered recommendations for quality improvements
+### 🧠 Quality Copilot (AI Layer)
+- **Requirement Clarity Analysis** - AI-powered scoring (0-100) of requirement testability and ambiguity.
+- **Automated Test Generation** - Instant generation of Playwright test steps and edge-case scenarios using LLMs.
+- **Release Readiness Check** - Deterministic risk scoring and AI-driven GO/NO-GO recommendations.
+- **Intelligent Failure Analysis** - Root cause analysis and automated fix suggestions for failing test runs.
 
-## Tech Stack
+### 🤖 Autonomous Operations
+- **MCP Server** - Built-in **Model Context Protocol** server (`veriship_mcp.py`) exposing the entire platform as tools for AI agents (Claude, GPT).
+- **n8n Orchestration** - First-class support for n8n workflows using dedicated **Service Accounts** and non-expiring JWTs.
+- **Agentic Workflows** - Autonomous monitoring of "Coverage Gaps" and "Ambiguous Requirements" with automated healing and notifications.
 
-**Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui  
-**Backend**: FastAPI + SQLAlchemy + PostgreSQL + Redis  
-**Infrastructure**: Docker + Docker Compose
+### 📊 Governance & Intelligence
+- **Real-time Dashboard** - Live metrics on quality coverage, risk scores, and team activity.
+- **Defect Intelligence** - Smart tracking with severity prediction and recurrence analysis.
 
-## Quick Start
+## 🛠️ Tech Stack
+
+- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui
+- **Backend**: FastAPI + SQLAlchemy + PostgreSQL + Redis
+- **AI Gateway**: **OpenRouter** (Default: `google/gemma-3-27b-it:free`)
+- **Automation**: Playwright
+- **Integration**: n8n + MCP (Model Context Protocol)
+- **Infrastructure**: Docker + Docker Compose
+
+## 🏁 Quick Start
 
 ### Prerequisites
 - Node.js & npm
 - Python 3.10+
 - Docker & Docker Compose
 
-### Development
+### Development Setup
 
+1. **Clone & Install**
+   ```sh
+   # Install frontend dependencies
+   npm install
+
+   # Setup backend environment
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # or venv\Scripts\activate on Windows
+   pip install -r requirements.txt
+   ```
+
+2. **Configuration**
+   - Copy `backend/.env.example` to `backend/.env`.
+   - Add your `OPENROUTER_API_KEY` for AI features.
+
+3. **Launch Services**
+   ```sh
+   # Start Docker services (PostgreSQL, Redis)
+   docker-compose up -d
+
+   # Run backend (port 8000)
+   python run.py
+
+   # Start frontend (port 8082)
+   # Back in root directory
+   npm run dev
+   ```
+
+## 🔌 Integration & Agentic Access
+
+### MCP Server (Model Context Protocol)
+Expose VeriShip to your AI tools:
 ```sh
-# Install frontend dependencies
-npm install
-
-# Start frontend (port 8082)
-npm run dev
-
-# Start backend (in another terminal)
-cd backend
-python run.py
-
-# Start Docker services (PostgreSQL, Redis)
-docker-compose up -d
+python veriship_mcp.py
 ```
 
-Visit `http://localhost:8082` to access the dashboard.
+### n8n Service Account
+Provision an automated agent:
+```sh
+curl -X POST http://localhost:8000/api/auth/service-account \
+  -H "Content-Type: application/json" \
+  -d '{"name": "n8n-agent", "description": "QA Automation Orchestrator", "role": "agent"}'
+```
 
-## Project Structure
+## 📂 Project Structure
 
 - `src/` - React frontend components and pages
 - `backend/` - FastAPI application, models, and routes
-- `public/` - Static assets
+- `mcp/` - MCP server implementation and tool definitions
 - `docker-compose.yml` - Docker services configuration
+- `veriship_mcp.py` - Main entry point for the MCP server
 
-## Architecture
+## 📄 License
 
-The platform follows a modular design with 6 core QA modules, each with dedicated database schemas, API endpoints, and UI components for specialized quality governance workflows.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
+Proprietary - VeriShip Quality Governance Platform.
