@@ -1,13 +1,24 @@
 """Notifications routes."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.database import get_db
-from app.models import ReleaseApproval, Defect, QAInsight, ApprovalStatus, DefectSeverity, DefectStatus, Release
+from app.models import (
+    ReleaseApproval, 
+    Defect, 
+    QAInsight, 
+    ApprovalStatus, 
+    DefectSeverity, 
+    DefectStatus, 
+    Release, 
+    UserProjectAssignment, 
+    User
+)
+from app.auth import get_current_user
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 
 router = APIRouter()
 
@@ -22,15 +33,34 @@ class NotificationItem(BaseModel):
 
 
 @router.get("/", response_model=List[NotificationItem])
-def get_notifications(db: Session = Depends(get_db)):
-    """Get aggregated notifications for the current user context."""
+def get_notifications(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get aggregated notifications for the current user, scoped to their assigned projects."""
+    
+    # Get all project IDs the user has access to
+    user_project_ids = [
+        a.project_id 
+        for a in db.query(UserProjectAssignment)
+        .filter(UserProjectAssignment.user_id == current_user.id)
+        .all()
+    ]
+    
+    # If user has no projects, return empty list
+    if not user_project_ids:
+        return []
+
     notifications = []
     
-    # 1. Pending Release Approvals
+    # 1. Pending Release Approvals (scoped to user's projects)
     pending_approvals = (
         db.query(ReleaseApproval)
         .join(Release)
-        .filter(ReleaseApproval.status == ApprovalStatus.PENDING)
+        .filter(
+            ReleaseApproval.status == ApprovalStatus.PENDING,
+            Release.project_id.in_(user_project_ids)
+        )
         .order_by(ReleaseApproval.created_at.desc())
         .limit(5)
         .all()
@@ -46,12 +76,13 @@ def get_notifications(db: Session = Depends(get_db)):
             link=f"/releases"
         ))
         
-    # 2. Critical/High Defects (Open)
+    # 2. Critical/High Defects (Open) — scoped to user's projects
     critical_defects = (
         db.query(Defect)
         .filter(
             Defect.status.in_([DefectStatus.OPEN, DefectStatus.REOPENED]),
-            Defect.severity.in_([DefectSeverity.CRITICAL, DefectSeverity.HIGH])
+            Defect.severity.in_([DefectSeverity.CRITICAL, DefectSeverity.HIGH]),
+            Defect.project_id.in_(user_project_ids)
         )
         .order_by(Defect.created_at.desc())
         .limit(5)
@@ -68,9 +99,10 @@ def get_notifications(db: Session = Depends(get_db)):
             link=f"/defects"
         ))
 
-    # 3. Recent AI Insights (last 24 hours)
+    # 3. Recent AI Insights (last 24 hours) — scoped to user's projects
     recent_insights = (
         db.query(QAInsight)
+        .filter(QAInsight.project_id.in_(user_project_ids))
         .order_by(QAInsight.created_at.desc())
         .limit(3)
         .all()
@@ -86,7 +118,7 @@ def get_notifications(db: Session = Depends(get_db)):
             link="/ai-insights"
         ))
         
-    # Sort all by timestamp descending
+    # Sort all notifications by timestamp descending
     notifications.sort(key=lambda x: x.timestamp, reverse=True)
     
-    return notifications[:10]  # Return top 10
+    return notifications[:10]  # Return top 10 most recent
