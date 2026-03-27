@@ -14,11 +14,11 @@ from app.models import (
     TestStatus,
     DefectStatus,
     DefectSeverity,
-    UserProjectAssignment,
     User,
     QualityMetric,
 )
 from app.auth import get_current_user
+from app.dependencies import get_user_project_ids
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -68,12 +68,7 @@ def get_dashboard_metrics(
     """Get aggregated metrics for dashboard — scoped to user's projects only."""
     
     # Get projects the user has access to
-    user_project_ids = [
-        a.project_id 
-        for a in db.query(UserProjectAssignment)
-        .filter(UserProjectAssignment.user_id == current_user.id)
-        .all()
-    ]
+    user_project_ids = get_user_project_ids(db, current_user.id)
     
     if not user_project_ids:
         # Return zeroed metrics if user has no projects
@@ -161,12 +156,7 @@ def get_project_metrics(
     current_user: User = Depends(get_current_user)
 ):
     """Get metrics for each project the user has access to."""
-    user_project_ids = [
-        a.project_id 
-        for a in db.query(UserProjectAssignment)
-        .filter(UserProjectAssignment.user_id == current_user.id)
-        .all()
-    ]
+    user_project_ids = get_user_project_ids(db, current_user.id)
     
     projects = db.query(Project).filter(Project.id.in_(user_project_ids)).all()
     
@@ -220,12 +210,7 @@ def get_activity_feed(
     current_user: User = Depends(get_current_user)
 ):
     """Get recent activity across user's projects only."""
-    user_project_ids = [
-        a.project_id 
-        for a in db.query(UserProjectAssignment)
-        .filter(UserProjectAssignment.user_id == current_user.id)
-        .all()
-    ]
+    user_project_ids = get_user_project_ids(db, current_user.id)
     
     if not user_project_ids:
         return []
@@ -294,12 +279,7 @@ def get_trends(
 ):
     """Return recent quality trend points. Scoped to user's projects."""
     
-    user_project_ids = [
-        a.project_id 
-        for a in db.query(UserProjectAssignment)
-        .filter(UserProjectAssignment.user_id == current_user.id)
-        .all()
-    ]
+    user_project_ids = get_user_project_ids(db, current_user.id)
     
     if not user_project_ids:
         return []
