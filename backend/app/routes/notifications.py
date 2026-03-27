@@ -12,10 +12,11 @@ from app.models import (
     DefectSeverity, 
     DefectStatus, 
     Release, 
-    UserProjectAssignment, 
-    User
+    User, 
+    UserProjectAssignment
 )
 from app.auth import get_current_user
+from app.dependencies import get_user_project_ids
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -39,13 +40,8 @@ def get_notifications(
 ):
     """Get aggregated notifications for the current user, scoped to their assigned projects."""
     
-    # Get all project IDs the user has access to
-    user_project_ids = [
-        a.project_id 
-        for a in db.query(UserProjectAssignment)
-        .filter(UserProjectAssignment.user_id == current_user.id)
-        .all()
-    ]
+    # Get all project IDs the user has access to (using centralized helper)
+    user_project_ids = get_user_project_ids(db, current_user.id)
     
     # If user has no projects, return empty list
     if not user_project_ids:
@@ -99,7 +95,7 @@ def get_notifications(
             link=f"/defects"
         ))
 
-    # 3. Recent AI Insights (last 24 hours) — scoped to user's projects
+    # 3. Recent AI Insights — scoped to user's projects
     recent_insights = (
         db.query(QAInsight)
         .filter(QAInsight.project_id.in_(user_project_ids))
