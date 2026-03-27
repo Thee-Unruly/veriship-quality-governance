@@ -1,6 +1,6 @@
 """Metrics and analytics routes."""
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database import get_db
@@ -14,11 +14,14 @@ from app.models import (
     TestStatus,
     DefectStatus,
     DefectSeverity,
+    UserProjectAssignment,
+    User,
+    QualityMetric,
 )
+from app.auth import get_current_user
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
-from app.models import QualityMetric
 
 router = APIRouter()
 
@@ -58,55 +61,85 @@ class ActivityLog(BaseModel):
 
 
 @router.get("/dashboard", response_model=MetricsResponse)
-def get_dashboard_metrics(db: Session = Depends(get_db)):
-    """Get aggregated metrics for dashboard."""
+def get_dashboard_metrics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get aggregated metrics for dashboard — scoped to user's projects only."""
+    
+    # Get projects the user has access to
+    user_project_ids = [
+        a.project_id 
+        for a in db.query(UserProjectAssignment)
+        .filter(UserProjectAssignment.user_id == current_user.id)
+        .all()
+    ]
+    
+    if not user_project_ids:
+        # Return zeroed metrics if user has no projects
+        return MetricsResponse(
+            total_requirements=0,
+            total_test_cases=0,
+            total_defects=0,
+            open_defects=0,
+            critical_defects=0,
+            test_pass_rate=0.0,
+            pending_releases=0,
+            overall_risk_score=0.0,
+            coverage_percent=0.0,
+        )
+
     # Count total requirements
-    total_requirements = db.query(func.count(Requirement.id)).scalar() or 0
+    total_requirements = db.query(func.count(Requirement.id)).filter(
+        Requirement.project_id.in_(user_project_ids)
+    ).scalar() or 0
     
     # Count total test cases
-    total_test_cases = db.query(func.count(TestCase.id)).scalar() or 0
+    total_test_cases = db.query(func.count(TestCase.id)).filter(
+        TestCase.project_id.in_(user_project_ids)
+    ).scalar() or 0
     
     # Count defects
-    total_defects = db.query(func.count(Defect.id)).scalar() or 0
-    open_defects = (
-        db.query(func.count(Defect.id))
-        .filter(Defect.status.in_([DefectStatus.OPEN, DefectStatus.IN_PROGRESS]))
-        .scalar()
-        or 0
-    )
-    critical_defects = (
-        db.query(func.count(Defect.id))
-        .filter(Defect.severity.in_([DefectSeverity.CRITICAL, DefectSeverity.HIGH]))
-        .scalar()
-        or 0
-    )
+    total_defects = db.query(func.count(Defect.id)).filter(
+        Defect.project_id.in_(user_project_ids)
+    ).scalar() or 0
     
-    # Calculate test pass rate
-    passed_tests = (
-        db.query(func.count(TestExecution.id))
-        .filter(TestExecution.status == TestStatus.PASSED)
-        .scalar()
-        or 0
-    )
-    total_executions = db.query(func.count(TestExecution.id)).scalar() or 1
-    test_pass_rate = (passed_tests / total_executions * 100) if total_executions > 0 else 0
+    open_defects = db.query(func.count(Defect.id)).filter(
+        Defect.project_id.in_(user_project_ids),
+        Defect.status.in_([DefectStatus.OPEN, DefectStatus.IN_PROGRESS])
+    ).scalar() or 0
+    
+    critical_defects = db.query(func.count(Defect.id)).filter(
+        Defect.project_id.in_(user_project_ids),
+        Defect.severity.in_([DefectSeverity.CRITICAL, DefectSeverity.HIGH])
+    ).scalar() or 0
+    
+    # Calculate test pass rate (scoped)
+    passed_tests = db.query(func.count(TestExecution.id)).join(TestCase).filter(
+        TestCase.project_id.in_(user_project_ids),
+        TestExecution.status == TestStatus.PASSED
+    ).scalar() or 0
+    
+    total_executions = db.query(func.count(TestExecution.id)).join(TestCase).filter(
+        TestCase.project_id.in_(user_project_ids)
+    ).scalar() or 1
+    
+    test_pass_rate = (passed_tests / total_executions * 100) if total_executions > 0 else 0.0
     
     # Count pending releases
-    pending_releases = (
-        db.query(func.count(Release.id))
-        .filter(Release.status != "released")
-        .scalar()
-        or 0
-    )
+    pending_releases = db.query(func.count(Release.id)).filter(
+        Release.project_id.in_(user_project_ids),
+        Release.status != "released"
+    ).scalar() or 0
     
-    # Calculate overall risk score (0-100)
-    # Based on: defect density (40%), test coverage (30%), release readiness (30%)
-    active_projects = db.query(func.count(Project.id)).scalar() or 1
+    # Calculate overall risk score
     defect_density_score = min(100, (open_defects / max(1, total_test_cases)) * 100)
     coverage_score = max(0, 100 - (total_defects / max(1, total_requirements) * 50))
     
-    overall_risk = (defect_density_score * 0.4) + ((100 - coverage_score) * 0.3) + (
-        (critical_defects / max(1, total_defects) * 100 if total_defects > 0 else 0) * 0.3
+    overall_risk = (
+        (defect_density_score * 0.4) +
+        ((100 - coverage_score) * 0.3) +
+        ((critical_defects / max(1, total_defects) * 100 if total_defects > 0 else 0) * 0.3)
     )
     
     return MetricsResponse(
@@ -123,9 +156,20 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
 
 
 @router.get("/projects", response_model=List[ProjectMetrics])
-def get_project_metrics(db: Session = Depends(get_db)):
-    """Get metrics for each project."""
-    projects = db.query(Project).all()
+def get_project_metrics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get metrics for each project the user has access to."""
+    user_project_ids = [
+        a.project_id 
+        for a in db.query(UserProjectAssignment)
+        .filter(UserProjectAssignment.user_id == current_user.id)
+        .all()
+    ]
+    
+    projects = db.query(Project).filter(Project.id.in_(user_project_ids)).all()
+    
     metrics = []
     
     for project in projects:
@@ -137,27 +181,17 @@ def get_project_metrics(db: Session = Depends(get_db)):
             TestCase.project_id == project.id
         ).scalar() or 0
         
-        open_defects = (
-            db.query(func.count(Defect.id))
-            .filter(
-                Defect.project_id == project.id,
-                Defect.status.in_([DefectStatus.OPEN, DefectStatus.IN_PROGRESS])
-            )
-            .scalar()
-            or 0
-        )
+        open_defects = db.query(func.count(Defect.id)).filter(
+            Defect.project_id == project.id,
+            Defect.status.in_([DefectStatus.OPEN, DefectStatus.IN_PROGRESS])
+        ).scalar() or 0
         
-        critical_def = (
-            db.query(func.count(Defect.id))
-            .filter(
-                Defect.project_id == project.id,
-                Defect.severity.in_([DefectSeverity.CRITICAL, DefectSeverity.HIGH])
-            )
-            .scalar()
-            or 0
-        )
+        critical_def = db.query(func.count(Defect.id)).filter(
+            Defect.project_id == project.id,
+            Defect.severity.in_([DefectSeverity.CRITICAL, DefectSeverity.HIGH])
+        ).scalar() or 0
         
-        # Risk calculation
+        # Risk calculation per project
         defect_ratio = (open_defects / max(1, tc_count)) * 50
         coverage_ratio = (req_count / max(1, tc_count)) * 30
         criticality_ratio = (critical_def / max(1, open_defects + 1)) * 20 if open_defects > 0 else 0
@@ -180,14 +214,29 @@ def get_project_metrics(db: Session = Depends(get_db)):
 
 
 @router.get("/activity", response_model=List[ActivityLog])
-def get_activity_feed(limit: int = 10, db: Session = Depends(get_db)):
-    """Get recent activity across all projects."""
+def get_activity_feed(
+    limit: int = 10, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get recent activity across user's projects only."""
+    user_project_ids = [
+        a.project_id 
+        for a in db.query(UserProjectAssignment)
+        .filter(UserProjectAssignment.user_id == current_user.id)
+        .all()
+    ]
+    
+    if not user_project_ids:
+        return []
+
     activities = []
     
-    # Get recent defects
+    # Get recent defects (scoped)
     recent_defects = (
         db.query(Defect, Project)
         .join(Project)
+        .filter(Defect.project_id.in_(user_project_ids))
         .order_by(Defect.created_at.desc())
         .limit(limit)
         .all()
@@ -204,10 +253,11 @@ def get_activity_feed(limit: int = 10, db: Session = Depends(get_db)):
             )
         )
     
-    # Get recent releases
+    # Get recent releases (scoped)
     recent_releases = (
         db.query(Release, Project)
         .join(Project)
+        .filter(Release.project_id.in_(user_project_ids))
         .order_by(Release.created_at.desc())
         .limit(limit)
         .all()
@@ -224,7 +274,7 @@ def get_activity_feed(limit: int = 10, db: Session = Depends(get_db)):
             )
         )
     
-    # Sort by timestamp descending and return top N
+    # Sort by timestamp descending and limit
     return sorted(activities, key=lambda x: x.timestamp, reverse=True)[:limit]
 
 
@@ -236,19 +286,35 @@ class TrendPoint(BaseModel):
 
 
 @router.get("/trends", response_model=List[TrendPoint])
-def get_trends(project_id: Optional[int] = None, months: int = 6, db: Session = Depends(get_db)):
-    """Return recent quality trend points (coverage, defects, risk) per month.
+def get_trends(
+    project_id: Optional[int] = None, 
+    months: int = 6, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Return recent quality trend points. Scoped to user's projects."""
+    
+    user_project_ids = [
+        a.project_id 
+        for a in db.query(UserProjectAssignment)
+        .filter(UserProjectAssignment.user_id == current_user.id)
+        .all()
+    ]
+    
+    if not user_project_ids:
+        return []
 
-    If `project_id` is provided, trends are for that project; otherwise aggregated across projects.
-    """
-    # Fetch metrics; we'll bucket by year-month
-    query = db.query(QualityMetric)
+    query = db.query(QualityMetric).filter(QualityMetric.project_id.in_(user_project_ids))
+    
     if project_id:
+        # Verify the requested project belongs to the user
+        if project_id not in user_project_ids:
+            raise HTTPException(status_code=403, detail="Not authorized")
         query = query.filter(QualityMetric.project_id == project_id)
 
     metrics = query.order_by(QualityMetric.metric_date.desc()).all()
 
-    # Bucket by YYYY-MM -> take the latest metric in that month
+    # Bucket by YYYY-MM → take the latest metric per month
     buckets = {}
     for m in metrics:
         key = m.metric_date.strftime("%Y-%m") if m.metric_date else None
@@ -257,7 +323,7 @@ def get_trends(project_id: Optional[int] = None, months: int = 6, db: Session = 
         if key not in buckets:
             buckets[key] = m
 
-    # Sort months ascending and take the last `months` entries
+    # Take the last `months` entries (sorted ascending)
     keys = sorted(buckets.keys())[-months:]
     result = []
     for k in keys:
