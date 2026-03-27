@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Defect, DefectSeverity, DefectStatus, User, UserProjectAssignment
 from app.auth import get_current_user
+from app.dependencies import assert_project_access, get_user_project_ids
 from app.utils import recalculate_project_status
 from pydantic import BaseModel, field_validator
 from datetime import datetime
@@ -30,6 +31,7 @@ class DefectCreate(BaseModel):
             return v.lower()
         return v
 
+
 class DefectUpdate(BaseModel):
     """Defect update schema."""
     title: Optional[str] = None
@@ -45,6 +47,7 @@ class DefectUpdate(BaseModel):
             return v.lower().replace(" ", "_").replace("-", "_")
         return v
 
+
 class DefectResponse(BaseModel):
     """Defect response schema."""
     id: int
@@ -59,6 +62,7 @@ class DefectResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
 # ========== Defect Endpoints ==========
 
 @router.get("/all", response_model=List[DefectResponse])
@@ -69,11 +73,7 @@ def list_all_defects(
     current_user: User = Depends(get_current_user)
 ):
     """List all defects across every project the user belongs to."""
-    # Get only project IDs this user belongs to
-    user_project_ids = [
-        a.project_id for a in db.query(UserProjectAssignment)
-        .filter(UserProjectAssignment.user_id == current_user.id).all()
-    ]
+    user_project_ids = get_user_project_ids(db, current_user.id)
     
     query = db.query(Defect).filter(Defect.project_id.in_(user_project_ids))
     
@@ -92,9 +92,8 @@ def list_defects(
     current_user: User = Depends(get_current_user)
 ):
     """List defects for a specific project if authorized."""
-    if not db.query(UserProjectAssignment).filter_by(project_id=project_id, user_id=current_user.id).first():
-        raise HTTPException(status_code=403, detail="Not authorized")
-        
+    assert_project_access(db, project_id, current_user.id)
+    
     defects = db.query(Defect).filter(Defect.project_id == project_id).all()
     return defects
 
@@ -106,8 +105,7 @@ def create_defect(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new defect for an authorized project."""
-    if not db.query(UserProjectAssignment).filter_by(project_id=defect.project_id, user_id=current_user.id).first():
-        raise HTTPException(status_code=403, detail="Not authorized")
+    assert_project_access(db, defect.project_id, current_user.id)
 
     # Auto-generate defect_id if not provided
     defect_id = defect.defect_id
@@ -115,7 +113,7 @@ def create_defect(
         existing_defs = db.query(Defect).filter(Defect.project_id == defect.project_id).all()
         max_num = 0
         for d in existing_defs:
-            if d.defect_id.startswith("DEF-"):
+            if d.defect_id and d.defect_id.startswith("DEF-"):
                 try:
                     num = int(d.defect_id.split("-")[1])
                     max_num = max(max_num, num)
@@ -155,18 +153,17 @@ def update_defect(
     if not defect:
         raise HTTPException(status_code=404, detail="Defect not found")
     
-    if not db.query(UserProjectAssignment).filter_by(project_id=defect.project_id, user_id=current_user.id).first():
-        raise HTTPException(status_code=403, detail="Not authorized")
+    assert_project_access(db, defect.project_id, current_user.id)
     
-    if defect_update.title:
+    if defect_update.title is not None:
         defect.title = defect_update.title
-    if defect_update.description:
+    if defect_update.description is not None:
         defect.description = defect_update.description
-    if defect_update.severity:
+    if defect_update.severity is not None:
         defect.severity = defect_update.severity
-    if defect_update.status:
+    if defect_update.status is not None:
         defect.status = defect_update.status
-    if defect_update.found_by:
+    if defect_update.found_by is not None:
         defect.found_by = defect_update.found_by
     
     db.commit()
@@ -191,8 +188,7 @@ def delete_defect(
     if not defect:
         raise HTTPException(status_code=404, detail="Defect not found")
     
-    if not db.query(UserProjectAssignment).filter_by(project_id=defect.project_id, user_id=current_user.id).first():
-        raise HTTPException(status_code=403, detail="Not authorized")
+    assert_project_access(db, defect.project_id, current_user.id)
     
     project_id = defect.project_id
     db.delete(defect)
