@@ -5,20 +5,12 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Requirement, RequirementStatus, UserProjectAssignment, User
 from app.auth import get_current_user
+from app.dependencies import assert_project_access, get_user_project_ids
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
 
 router = APIRouter()
-
-
-# Helper function to check project access
-def assert_project_access(db: Session, project_id: int, user_id: int):
-    """Raise 403 if user is not assigned to the project."""
-    if not db.query(UserProjectAssignment).filter_by(
-        project_id=project_id, user_id=user_id
-    ).first():
-        raise HTTPException(status_code=403, detail="Not authorized")
 
 
 class RequirementCreate(BaseModel):
@@ -120,7 +112,7 @@ def update_requirement(
     if not requirement:
         raise HTTPException(status_code=404, detail="Requirement not found")
     
-    # Check project ownership
+    # Check project ownership using centralized helper
     assert_project_access(db, requirement.project_id, current_user.id)
     
     if req_update.title is not None:
@@ -150,7 +142,7 @@ def delete_requirement(
     if not requirement:
         raise HTTPException(status_code=404, detail="Requirement not found")
     
-    # Check project ownership
+    # Check project ownership using centralized helper
     assert_project_access(db, requirement.project_id, current_user.id)
     
     db.delete(requirement)
