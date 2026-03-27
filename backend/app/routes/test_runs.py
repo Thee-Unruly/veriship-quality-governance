@@ -13,8 +13,9 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Requirement, UserProjectAssignment, User
+from app.models import Requirement, User, UserProjectAssignment
 from app.auth import get_current_user
+from app.dependencies import assert_project_access
 from app.config import settings
 import requests
 
@@ -140,12 +141,8 @@ def generate_and_run_test(
     if not requirement:
         raise HTTPException(status_code=404, detail="Requirement not found")
 
-    # === OWNERSHIP CHECK (Fixed) ===
-    if not db.query(UserProjectAssignment).filter_by(
-        project_id=requirement.project_id, 
-        user_id=current_user.id
-    ).first():
-        raise HTTPException(status_code=403, detail="Not authorized to run tests for this project")
+    # === OWNERSHIP CHECK using centralized helper ===
+    assert_project_access(db, requirement.project_id, current_user.id)
 
     # Create queue for this job
     queue: asyncio.Queue = asyncio.Queue()
