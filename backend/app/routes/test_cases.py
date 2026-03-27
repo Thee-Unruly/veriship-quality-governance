@@ -1,16 +1,26 @@
 """Test Case routes."""
 
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import TestCase, Project
+from app.models import TestCase, Project, UserProjectAssignment, User
+from app.auth import get_current_user
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional, List
 
 router = APIRouter()
 
+# ========== Helpers ==========
+
+def assert_project_access(db: Session, project_id: int, user_id: int):
+    """Verify the user is assigned to the given project."""
+    if not db.query(UserProjectAssignment).filter_by(
+        project_id=project_id, user_id=user_id
+    ).first():
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+# ========== Schemas ==========
 
 class TestCaseCreate(BaseModel):
     """Test case creation schema."""
@@ -23,7 +33,6 @@ class TestCaseCreate(BaseModel):
     priority: Optional[int] = 1
     status: Optional[str] = "ongoing"
 
-
 class TestCaseUpdate(BaseModel):
     """Test case update schema."""
     title: Optional[str] = None
@@ -32,7 +41,6 @@ class TestCaseUpdate(BaseModel):
     priority: Optional[int] = None
     is_automated: Optional[bool] = None
     status: Optional[str] = None
-
 
 class TestCaseResponse(BaseModel):
     """Test case response schema."""
@@ -52,20 +60,26 @@ class TestCaseResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
 class BatchTestCaseCreate(BaseModel):
     project_id: int
     requirement_id: Optional[int] = None
     test_cases: List[dict]  # Each dict should match GeneratedTestCase schema
 
+# ========== Test Case Endpoints ==========
 
 @router.post("/batch-add", response_model=List[TestCaseResponse])
-def batch_add_test_cases(batch: BatchTestCaseCreate, db: Session = Depends(get_db)):
-    """Batch add test cases (for AI-generated or bulk import)."""
-    # Validate that the project exists
+def batch_add_test_cases(
+    batch: BatchTestCaseCreate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Batch add test cases for an authorized project."""
     project = db.query(Project).filter(Project.id == batch.project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail=f"Project with id {batch.project_id} not found")
+    
+    # Authorization Check
+    assert_project_access(db, batch.project_id, current_user.id)
     
     created = []
     for tc in batch.test_cases:
@@ -87,24 +101,34 @@ def batch_add_test_cases(batch: BatchTestCaseCreate, db: Session = Depends(get_d
         created.append(db_tc)
     return created
 
-
 @router.get("/{project_id}", response_model=List[TestCaseResponse])
-def list_test_cases(project_id: int, status: Optional[str] = None, db: Session = Depends(get_db)):
-    """List test cases for a project. Optional `status` filter (ongoing/completed/archived)."""
+def list_test_cases(
+    project_id: int, 
+    status: Optional[str] = None, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List test cases for an authorized project."""
+    assert_project_access(db, project_id, current_user.id)
+    
     query = db.query(TestCase).filter(TestCase.project_id == project_id)
     if status:
         query = query.filter(TestCase.status == status)
+    
     test_cases = query.all()
     return test_cases
 
-
 @router.post("/", response_model=TestCaseResponse)
-def create_test_case(tc: TestCaseCreate, db: Session = Depends(get_db)):
-    """Create a new test case."""
-    # Auto-generate test_case_id if not provided
+def create_test_case(
+    tc: TestCaseCreate, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new test case for an authorized project."""
+    assert_project_access(db, tc.project_id, current_user.id)
+    
     test_case_id = tc.test_case_id
     if not test_case_id:
-        # Find the highest numbered test case for this project
         existing_tcs = db.query(TestCase).filter(TestCase.project_id == tc.project_id).all()
         max_num = 0
         for t in existing_tcs:
@@ -131,17 +155,20 @@ def create_test_case(tc: TestCaseCreate, db: Session = Depends(get_db)):
     db.refresh(db_tc)
     return db_tc
 
-
 @router.put("/{test_case_id}", response_model=TestCaseResponse)
 def update_test_case(
     test_case_id: int,
     tc_update: TestCaseUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """Update a test case."""
+    """Update a test case if authorized."""
     test_case = db.query(TestCase).filter(TestCase.id == test_case_id).first()
     if not test_case:
         raise HTTPException(status_code=404, detail="Test case not found")
+    
+    # Authorization Check
+    assert_project_access(db, test_case.project_id, current_user.id)
     
     if tc_update.title:
         test_case.title = tc_update.title
@@ -160,15 +187,20 @@ def update_test_case(
     db.refresh(test_case)
     return test_case
 
-
 @router.delete("/{test_case_id}")
-def delete_test_case(test_case_id: int, db: Session = Depends(get_db)):
-    """Delete a test case."""
+def delete_test_case(
+    test_case_id: int, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a test case if authorized."""
     test_case = db.query(TestCase).filter(TestCase.id == test_case_id).first()
     if not test_case:
         raise HTTPException(status_code=404, detail="Test case not found")
     
+    # Authorization Check
+    assert_project_access(db, test_case.project_id, current_user.id)
+    
     db.delete(test_case)
     db.commit()
     return {"status": "deleted"}
-
