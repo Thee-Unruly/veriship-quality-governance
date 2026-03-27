@@ -13,7 +13,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Requirement
+from app.models import Requirement, UserProjectAssignment, User
+from app.auth import get_current_user
 from app.config import settings
 import requests
 
@@ -30,17 +31,20 @@ def _start_process_and_stream(job_id: str, cmd: str):
     if queue is None:
         return
 
-    # Start the subprocess
-    # Use shell=False for safety; split the command
     try:
         parts = shlex.split(cmd)
-        proc = subprocess.Popen(parts, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=1, text=True)
+        proc = subprocess.Popen(
+            parts, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.STDOUT, 
+            bufsize=1, 
+            text=True
+        )
     except Exception as e:
         loop.call_soon_threadsafe(queue.put_nowait, f"ERROR: failed to start process: {e}\n")
         loop.call_soon_threadsafe(queue.put_nowait, "__DONE__")
         return
 
-    # Read lines and forward to queue
     try:
         for line in proc.stdout:
             loop.call_soon_threadsafe(queue.put_nowait, line.rstrip('\n'))
@@ -50,29 +54,6 @@ def _start_process_and_stream(job_id: str, cmd: str):
     proc.wait()
     loop.call_soon_threadsafe(queue.put_nowait, f"PROCESS_EXIT_CODE: {proc.returncode}")
     loop.call_soon_threadsafe(queue.put_nowait, "__DONE__")
-
-
-@router.post("/start")
-def start_test_run(background_tasks: BackgroundTasks, payload: dict):
-    """Start a test run.
-
-    Payload example:
-      { "type": "e2e", "cmd": "npx playwright test --config=load-tests/playwright.config.ts" }
-
-    The handler will return a `job_id`. Use the SSE endpoint to stream logs.
-    """
-    job_id = str(uuid.uuid4())
-    cmd = payload.get("cmd")
-    if not cmd:
-        raise HTTPException(status_code=400, detail="Missing 'cmd' in payload")
-
-    queue: asyncio.Queue = asyncio.Queue()
-    JOB_QUEUES[job_id] = queue
-
-    # Run the process in a background thread to avoid blocking the event loop
-    background_tasks.add_task(_start_process_and_stream, job_id, cmd)
-
-    return {"job_id": job_id}
 
 
 def _call_openrouter(api_key: str, user_message: str) -> str:
@@ -108,11 +89,7 @@ def _call_openrouter(api_key: str, user_message: str) -> str:
 
 
 def _validate_playwright_code(code: str) -> bool:
-    """
-    Validate that generated Playwright code is safe to execute.
-    Checks for syntax and forbidden patterns.
-    """
-    # Check for syntax errors with basic import/function detection
+    """Validate that generated Playwright code is safe to execute."""
     dangerous_patterns = [
         r'__import__',
         r'eval\s*\(',
@@ -122,13 +99,15 @@ def _validate_playwright_code(code: str) -> bool:
         r'open\s*\(',
         r'rmdir',
         r'remove\s*\(',
+        r'os\.remove',
+        r'os\.unlink',
+        r'shutil',
     ]
     
     for pattern in dangerous_patterns:
-        if re.search(pattern, code):
+        if re.search(pattern, code, re.IGNORECASE):
             return False
     
-    # Try to compile the code
     try:
         compile(code, '<string>', 'exec')
     except SyntaxError:
@@ -141,19 +120,12 @@ def _validate_playwright_code(code: str) -> bool:
 def generate_and_run_test(
     background_tasks: BackgroundTasks,
     payload: dict,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Generate Playwright test code from a requirement and execute it.
-    
-    Payload:
-      {
-        "requirement_id": <int>,
-        "target_base_url": "https://example.com",  # optional
-        "browser": "chromium"  # optional, default chromium
-      }
-    
-    Returns: { "job_id": "<uuid>", "requirement": {...} }
+    Only users assigned to the project can run tests for its requirements.
     """
     job_id = str(uuid.uuid4())
     requirement_id = payload.get("requirement_id")
@@ -162,22 +134,27 @@ def generate_and_run_test(
     
     if not requirement_id:
         raise HTTPException(status_code=400, detail="Missing 'requirement_id'")
-    
+
     # Fetch requirement
     requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
     if not requirement:
         raise HTTPException(status_code=404, detail="Requirement not found")
-    
+
+    # === OWNERSHIP CHECK (Fixed) ===
+    if not db.query(UserProjectAssignment).filter_by(
+        project_id=requirement.project_id, 
+        user_id=current_user.id
+    ).first():
+        raise HTTPException(status_code=403, detail="Not authorized to run tests for this project")
+
     # Create queue for this job
     queue: asyncio.Queue = asyncio.Queue()
     JOB_QUEUES[job_id] = queue
     
-    # Prepare AI generation task
     def _generate_and_execute():
         loop = asyncio.get_event_loop()
         
         try:
-            # Step 1: Generate Playwright test code via AI
             loop.call_soon_threadsafe(queue.put_nowait, "📋 Generating Playwright test code from requirement...")
             
             prompt = f"""Generate a complete Playwright test script for the following requirement:
@@ -192,27 +169,23 @@ Generate production-ready Playwright code that:
 3. Includes error handling
 4. Is ready to execute immediately
 
-Return ONLY the JavaScript/TypeScript Playwright code, no explanations.
-The code should create a test file that can be run with: npx playwright test <filename>
+Return ONLY the TypeScript Playwright code, no explanations.
+The code should be a complete test file that can be run with: npx playwright test <filename>
 
-Wrap the code in a single code block marked with ```javascript or ```typescript"""
+Wrap the code in ```typescript"""
 
             ai_response = _call_openrouter(
                 settings.openrouter_testcase_api_key,
                 prompt
             )
             
-            # Extract code block from markdown
-            code_match = re.search(r'```(?:javascript|typescript|js|ts)?\n(.*?)\n```', ai_response, re.DOTALL)
-            if code_match:
-                test_code = code_match.group(1).strip()
-            else:
-                test_code = ai_response.strip()
+            # Extract code from markdown block
+            code_match = re.search(r'```(?:typescript|javascript|ts|js)?\n(.*?)\n```', ai_response, re.DOTALL)
+            test_code = code_match.group(1).strip() if code_match else ai_response.strip()
             
             loop.call_soon_threadsafe(queue.put_nowait, "✓ Test code generated successfully")
-            loop.call_soon_threadsafe(queue.put_nowait, f"🔍 Validating code...")
+            loop.call_soon_threadsafe(queue.put_nowait, "🔍 Validating code...")
             
-            # Step 2: Validate code
             if not _validate_playwright_code(test_code):
                 loop.call_soon_threadsafe(queue.put_nowait, "❌ Validation failed: Code contains unsafe patterns or syntax errors")
                 loop.call_soon_threadsafe(queue.put_nowait, "__DONE__")
@@ -220,20 +193,17 @@ Wrap the code in a single code block marked with ```javascript or ```typescript"
             
             loop.call_soon_threadsafe(queue.put_nowait, "✓ Code validation passed")
             
-            # Step 3: Write code to temp file and execute with Playwright
+            # Write to temp file and run
             with tempfile.NamedTemporaryFile(mode='w', suffix='.spec.ts', delete=False) as f:
                 f.write(test_code)
                 temp_file = f.name
             
             try:
                 loop.call_soon_threadsafe(queue.put_nowait, f"🚀 Starting test execution: {temp_file}")
-                
-                # Run Playwright test
                 cmd = f"npx playwright test {temp_file} --reporter=list"
                 _start_process_and_stream(job_id, cmd)
-                
             finally:
-                # Cleanup temp file
+                # Cleanup
                 try:
                     os.unlink(temp_file)
                 except:
@@ -246,7 +216,7 @@ Wrap the code in a single code block marked with ```javascript or ```typescript"
             loop.call_soon_threadsafe(queue.put_nowait, f"ERROR: {str(e)}")
             loop.call_soon_threadsafe(queue.put_nowait, "__DONE__")
     
-    # Start generation in background
+    # Start the generation + execution in background
     background_tasks.add_task(_generate_and_execute)
     
     return {
@@ -258,7 +228,6 @@ Wrap the code in a single code block marked with ```javascript or ```typescript"
             "description": requirement.description
         }
     }
-
 
 
 async def _sse_generator(job_id: str):
@@ -273,14 +242,12 @@ async def _sse_generator(job_id: str):
             if line == "__DONE__":
                 yield "event: done\ndata: done\n\n"
                 break
-            # Escape data newlines
             yield f"data: {line}\n\n"
     finally:
-        # cleanup queue
         JOB_QUEUES.pop(job_id, None)
 
 
 @router.get("/{job_id}/events")
 def stream_test_run_events(job_id: str):
-    """SSE endpoint streaming stdout lines for a job id."""
+    """SSE endpoint streaming logs for a job id."""
     return StreamingResponse(_sse_generator(job_id), media_type="text/event-stream")
