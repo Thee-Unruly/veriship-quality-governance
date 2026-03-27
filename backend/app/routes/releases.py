@@ -4,13 +4,33 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from app.database import get_db
-from app.models import Release, ReleaseStatus, ReleaseApproval, TeamMember, ApprovalStatus, TestCase
+from app.models import (
+    Release, 
+    ReleaseStatus, 
+    ReleaseApproval, 
+    TeamMember, 
+    ApprovalStatus, 
+    TestCase, 
+    User, 
+    UserProjectAssignment
+)
+from app.auth import get_current_user
 from pydantic import BaseModel
 from datetime import datetime, timezone
 from typing import Optional, List
 
 router = APIRouter()
 
+# ========== Helpers ==========
+
+def assert_project_access(db: Session, project_id: int, user_id: int):
+    """Verify the user is assigned to the given project."""
+    if not db.query(UserProjectAssignment).filter_by(
+        project_id=project_id, user_id=user_id
+    ).first():
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+# ========== Schemas ==========
 
 class ReleaseCreate(BaseModel):
     """Release creation schema."""
@@ -19,14 +39,12 @@ class ReleaseCreate(BaseModel):
     version: str
     planned_release_date: Optional[datetime] = None
 
-
 class ReleaseUpdate(BaseModel):
     """Release update schema."""
     version: Optional[str] = None
     status: Optional[ReleaseStatus] = None
     planned_release_date: Optional[datetime] = None
     go_no_go_decision: Optional[str] = None
-
 
 class ReleaseResponse(BaseModel):
     """Release response schema."""
@@ -42,140 +60,6 @@ class ReleaseResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
-@router.get("/{project_id}", response_model=List[ReleaseResponse])
-def list_releases(project_id: int, db: Session = Depends(get_db)):
-    """List releases for a project."""
-    releases = db.query(Release).filter(Release.project_id == project_id).all()
-    return releases
-
-
-@router.get("/", response_model=List[ReleaseResponse])
-def list_all_releases(db: Session = Depends(get_db)):
-    """List all releases across projects."""
-    releases = db.query(Release).all()
-    return releases
-
-
-@router.post("/", response_model=ReleaseResponse)
-def create_release(release: ReleaseCreate, db: Session = Depends(get_db)):
-    """Create a new release."""
-    # Check if project has at least 80% test completion
-    total_tests = db.query(func.count(TestCase.id)).filter(
-        TestCase.project_id == release.project_id
-    ).scalar() or 0
-    
-    # Check completion based on 'pass' or 'fail' status
-    completed_tests = db.query(func.count(TestCase.id)).filter(
-        TestCase.project_id == release.project_id,
-        TestCase.status.in_(["pass", "passed", "fail", "failed", "completed"])
-    ).scalar() or 0
-    
-    # Calculate completion percentage
-    if total_tests > 0:
-        completion_percentage = (completed_tests / total_tests) * 100
-        # Require at least 50% of test cases to be executed (pass or fail)
-        if completion_percentage < 50:
-             raise HTTPException(
-                status_code=400,
-                detail=f"Cannot create release: Only {completion_percentage:.1f}% of tests are completed. Minimum 50% required."
-            )
-    else:
-        # If no tests exist, optionally allow release or block. For safety, let's allow it if it's a new project but warn?
-        # The user seems to have tests, so this block is hitting the percentage check. 
-        # Let's just pass if total_tests is 0 (though ideally there should be tests).
-        pass
-    
-    # Auto-generate release_id if not provided
-    release_id = release.release_id
-    if not release_id:
-        # Find the highest numbered release for this project
-        existing_rels = db.query(Release).filter(Release.project_id == release.project_id).all()
-        max_num = 0
-        for r in existing_rels:
-            if r.release_id.startswith("REL-"):
-                try:
-                    num = int(r.release_id.split("-")[1])
-                    max_num = max(max_num, num)
-                except (ValueError, IndexError):
-                    pass
-        release_id = f"REL-{max_num + 1:03d}"
-    
-    db_release = Release(
-        project_id=release.project_id,
-        release_id=release_id,
-        version=release.version,
-        planned_release_date=release.planned_release_date,
-    )
-    db.add(db_release)
-    db.flush()  # Get the release ID before creating approvals
-    
-    # Auto-create approval records only for Project Managers and QA
-    team_members = db.query(TeamMember).filter(
-        TeamMember.project_id == release.project_id
-    ).filter(
-        (TeamMember.role.ilike("%project manager%")) | (TeamMember.role.ilike("%qa%"))
-    ).all()
-    
-    if not team_members:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot create release: No Project Manager or QA found in team. Add a Project Manager or QA first."
-        )
-    
-    for member in team_members:
-        approval = ReleaseApproval(
-            release_id=db_release.id,
-            approver_name=member.name,
-            approver_role=member.role,
-            status=ApprovalStatus.PENDING
-        )
-        db.add(approval)
-    
-    db.commit()
-    db.refresh(db_release)
-    return db_release
-
-
-@router.put("/{release_id}", response_model=ReleaseResponse)
-def update_release(
-    release_id: int,
-    release_update: ReleaseUpdate,
-    db: Session = Depends(get_db)
-):
-    """Update a release."""
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    
-    if release_update.version:
-        release.version = release_update.version
-    if release_update.status:
-        release.status = release_update.status
-    if release_update.planned_release_date:
-        release.planned_release_date = release_update.planned_release_date
-    if release_update.go_no_go_decision:
-        release.go_no_go_decision = release_update.go_no_go_decision
-    
-    db.commit()
-    db.refresh(release)
-    return release
-
-
-@router.delete("/{release_id}")
-def delete_release(release_id: int, db: Session = Depends(get_db)):
-    """Delete a release."""
-    release = db.query(Release).filter(Release.id == release_id).first()
-    if not release:
-        raise HTTPException(status_code=404, detail="Release not found")
-    
-    db.delete(release)
-    db.commit()
-    return {"status": "deleted"}
-
-
-# ========== Release Approvals ==========
-
 class ReleaseApprovalResponse(BaseModel):
     """Release approval response schema."""
     id: int
@@ -190,102 +74,200 @@ class ReleaseApprovalResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class ReleaseApproveRequest(BaseModel):
+    """Payload for approving or rejecting a release."""
+    approver_name: str
+    decision: str 
+    comments: Optional[str] = None
 
-@router.get("/{release_id}/approvals", response_model=List[ReleaseApprovalResponse])
-def get_release_approvals(release_id: int, db: Session = Depends(get_db)):
-    """Get all approvals for a release."""
+# ========== Release Endpoints ==========
+
+@router.get("/{project_id}", response_model=List[ReleaseResponse])
+def list_releases(
+    project_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """List releases for a project if authorized."""
+    assert_project_access(db, project_id, current_user.id)
+    releases = db.query(Release).filter(Release.project_id == project_id).all()
+    return releases
+
+@router.get("/", response_model=List[ReleaseResponse])
+def list_all_releases(
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """List all releases across projects assigned to the user."""
+    user_project_ids = [
+        a.project_id for a in db.query(UserProjectAssignment)
+        .filter(UserProjectAssignment.user_id == current_user.id).all()
+    ]
+    releases = db.query(Release).filter(Release.project_id.in_(user_project_ids)).all()
+    return releases
+
+@router.post("/", response_model=ReleaseResponse)
+def create_release(
+    release: ReleaseCreate, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new release for an authorized project."""
+    assert_project_access(db, release.project_id, current_user.id)
+    
+    # Test completion check (logic preserved from original)
+    total_tests = db.query(func.count(TestCase.id)).filter(
+        TestCase.project_id == release.project_id
+    ).scalar() or 0
+    
+    completed_tests = db.query(func.count(TestCase.id)).filter(
+        TestCase.project_id == release.project_id,
+        TestCase.status.in_(["pass", "passed", "fail", "failed", "completed"])
+    ).scalar() or 0
+    
+    if total_tests > 0:
+        completion_percentage = (completed_tests / total_tests) * 100
+        if completion_percentage < 50:
+             raise HTTPException(
+                status_code=400,
+                detail=f"Cannot create release: Only {completion_percentage:.1f}% of tests are completed. Minimum 50% required."
+            )
+    
+    # ID Generation
+    release_id = release.release_id
+    if not release_id:
+        existing_rels = db.query(Release).filter(Release.project_id == release.project_id).all()
+        max_num = max([int(r.release_id.split("-")[1]) for r in existing_rels if r.release_id.startswith("REL-")] + [0])
+        release_id = f"REL-{max_num + 1:03d}"
+    
+    db_release = Release(
+        project_id=release.project_id,
+        release_id=release_id,
+        version=release.version,
+        planned_release_date=release.planned_release_date,
+    )
+    db.add(db_release)
+    db.flush() 
+    
+    # Auto-create approval records
+    team_members = db.query(TeamMember).filter(
+        TeamMember.project_id == release.project_id,
+        (TeamMember.role.ilike("%project manager%")) | (TeamMember.role.ilike("%qa%"))
+    ).all()
+    
+    if not team_members:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot create release: No Project Manager or QA found in team."
+        )
+    
+    for member in team_members:
+        db.add(ReleaseApproval(
+            release_id=db_release.id,
+            approver_name=member.name,
+            approver_role=member.role,
+            status=ApprovalStatus.PENDING
+        ))
+    
+    db.commit()
+    db.refresh(db_release)
+    return db_release
+
+@router.put("/{release_id}", response_model=ReleaseResponse)
+def update_release(
+    release_id: int,
+    release_update: ReleaseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Update a release if authorized."""
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
     
+    assert_project_access(db, release.project_id, current_user.id)
+    
+    if release_update.version: release.version = release_update.version
+    if release_update.status: release.status = release_update.status
+    if release_update.planned_release_date: release.planned_release_date = release_update.planned_release_date
+    if release_update.go_no_go_decision: release.go_no_go_decision = release_update.go_no_go_decision
+    
+    db.commit()
+    db.refresh(release)
+    return release
+
+@router.delete("/{release_id}")
+def delete_release(
+    release_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a release if authorized."""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    
+    assert_project_access(db, release.project_id, current_user.id)
+    
+    db.delete(release)
+    db.commit()
+    return {"status": "deleted"}
+
+# ========== Release Approvals ==========
+
+@router.get("/{release_id}/approvals", response_model=List[ReleaseApprovalResponse])
+def get_release_approvals(
+    release_id: int, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """Get all approvals for a release if authorized."""
+    release = db.query(Release).filter(Release.id == release_id).first()
+    if not release:
+        raise HTTPException(status_code=404, detail="Release not found")
+    
+    assert_project_access(db, release.project_id, current_user.id)
+    
     approvals = db.query(ReleaseApproval).filter(ReleaseApproval.release_id == release_id).all()
     return approvals
-
-
-# ========== Release Approve / Reject Action ==========
-
-class ReleaseApproveRequest(BaseModel):
-    """Payload for approving or rejecting a release."""
-    approver_name: str
-    decision: str  # "approved" or "rejected"
-    comments: Optional[str] = None
-
 
 @router.post("/{release_id}/approve", response_model=ReleaseApprovalResponse)
 def approve_release(
     release_id: int,
     payload: ReleaseApproveRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    """
-    Approve or reject a release on behalf of a named approver.
-
-    - **release_id**: The numeric ID of the release.
-    - **approver_name**: Must match the name on the pending approval record.
-    - **decision**: Either ``"approved"`` or ``"rejected"``.
-    - **comments**: Optional freetext justification.
-
-    When all approval records are resolved the release ``go_no_go_decision``
-    is set to ``"approved"`` (all approved) or ``"rejected"`` (any rejected).
-    """
-    # Validate decision value
+    """Approve or reject a release if authorized."""
     decision = payload.decision.lower()
     if decision not in ("approved", "rejected"):
-        raise HTTPException(
-            status_code=400,
-            detail="decision must be 'approved' or 'rejected'"
-        )
+        raise HTTPException(status_code=400, detail="decision must be 'approved' or 'rejected'")
 
-    # Ensure the release exists
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
 
-    # Find the pending approval record for this approver
-    approval = (
-        db.query(ReleaseApproval)
-        .filter(
-            ReleaseApproval.release_id == release_id,
-            ReleaseApproval.approver_name == payload.approver_name,
-            ReleaseApproval.status == ApprovalStatus.PENDING,
-        )
-        .first()
-    )
-    if not approval:
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                f"No pending approval found for approver '{payload.approver_name}' "
-                f"on release {release_id}. Either the approver name is wrong, "
-                "the approval was already actioned, or this approver is not assigned."
-            ),
-        )
+    assert_project_access(db, release.project_id, current_user.id)
 
-    # Stamp the approval
+    approval = db.query(ReleaseApproval).filter(
+        ReleaseApproval.release_id == release_id,
+        ReleaseApproval.approver_name == payload.approver_name,
+        ReleaseApproval.status == ApprovalStatus.PENDING,
+    ).first()
+    
+    if not approval:
+        raise HTTPException(status_code=404, detail="No pending approval found for this approver.")
+
     approval.status = ApprovalStatus.APPROVED if decision == "approved" else ApprovalStatus.REJECTED
     approval.comments = payload.comments
     approval.approved_at = datetime.now(timezone.utc)
 
-    # Check if all approvals for this release are now resolved
-    all_approvals = (
-        db.query(ReleaseApproval)
-        .filter(ReleaseApproval.release_id == release_id)
-        .all()
-    )
-    # Include the one we just updated (not yet committed)
-    pending_count = sum(
-        1 for a in all_approvals
-        if (a.id == approval.id and approval.status == ApprovalStatus.PENDING)
-        or (a.id != approval.id and a.status == ApprovalStatus.PENDING)
-    )
-    rejected_count = sum(
-        1 for a in all_approvals
-        if (a.id == approval.id and decision == "rejected")
-        or (a.id != approval.id and a.status == ApprovalStatus.REJECTED)
-    )
+    # State update logic
+    all_approvals = db.query(ReleaseApproval).filter(ReleaseApproval.release_id == release_id).all()
+    pending_count = sum(1 for a in all_approvals if a.status == ApprovalStatus.PENDING)
+    rejected_count = sum(1 for a in all_approvals if a.status == ApprovalStatus.REJECTED)
 
     if pending_count == 0:
-        # All resolved — set the release go/no-go decision
         if rejected_count > 0:
             release.go_no_go_decision = "rejected"
             release.status = ReleaseStatus.BLOCKED
@@ -296,4 +278,3 @@ def approve_release(
     db.commit()
     db.refresh(approval)
     return approval
-
