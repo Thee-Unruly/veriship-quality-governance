@@ -20,7 +20,7 @@ def seed_database():
     db = SessionLocal()
     
     # Check if data already exists
-    if db.query(Project).count() > 0:
+    if db.query(User).count() > 0 and db.query(Project).count() > 0:
         print("Database already seeded. Skipping...")
         return
     
@@ -221,9 +221,19 @@ def seed_database():
         db.add_all(approvers)
     db.commit()
     
-    print("✅ Created releases and approvals")
-    
-    db.close()
+    # === User Project Assignments ===
+    users = [demo_user, admin_user]
+    for user in users:
+        for project in projects:
+            assignment = UserProjectAssignment(
+                user_id=user.id,
+                project_id=project.id,
+                role="admin" if user.username == "admin" else "member"
+            )
+            db.add(assignment)
+    db.commit()
+    print(f"✅ Assigned {len(users)} users to {len(projects)} projects")
+
     print("\n✨ Database seeding complete!")
 
 

@@ -38,6 +38,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: veriship-app
+    env_file: ./backend/.env
     ports:
       - "8000:8000"
     environment:
@@ -86,6 +87,7 @@ services:
       context: .
       dockerfile: Dockerfile.mcp
     container_name: veriship-mcp
+    env_file: ./backend/.env
     environment:
       BACKEND_HOST: app
       # AGENT_TOKEN is already baked in but can be overridden here

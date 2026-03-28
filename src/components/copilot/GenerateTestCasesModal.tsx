@@ -91,7 +91,10 @@ export function GenerateTestCasesModal({
             };
             const resp = await fetch("http://localhost:8000/api/test-cases/batch-add", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("authToken")}`
+                },
                 body: JSON.stringify(payload)
             });
             if (!resp.ok) throw new Error("Failed to save test cases");
@@ -111,6 +114,7 @@ export function GenerateTestCasesModal({
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("authToken")}`
                 },
             });
 
