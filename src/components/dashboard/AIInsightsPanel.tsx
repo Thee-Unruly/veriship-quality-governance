@@ -29,7 +29,10 @@ export function AIInsightsPanel() {
     const fetchInsights = async () => {
       setLoading(true);
       try {
-        const res = await fetch("http://localhost:8000/api/copilot/insights");
+        const token = localStorage.getItem("authToken");
+        const res = await fetch("http://localhost:8000/api/copilot/insights", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
         if (!res.ok) throw new Error("Failed to load insights");
         const data = await res.json();
         if (mounted) setInsights(data || []);
@@ -132,9 +135,13 @@ export function AIInsightsPanel() {
                           className="h-7 text-xs"
                           onClick={async () => {
                             try {
+                              const token = localStorage.getItem("authToken");
                               const res = await fetch("http://localhost:8000/api/copilot/apply-insight", {
                                 method: "POST",
-                                headers: { "Content-Type": "application/json" },
+                                headers: { 
+                                  "Content-Type": "application/json",
+                                  "Authorization": `Bearer ${token}`
+                                },
                                 body: JSON.stringify(insight),
                               });
                               if (!res.ok) throw new Error("Failed to apply insight");

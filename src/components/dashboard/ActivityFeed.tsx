@@ -82,7 +82,10 @@ export function ActivityFeed({ activities = [] }: ActivityFeedProps) {
 
     const fetchActivity = async () => {
       try {
-        const res = await fetch("http://localhost:8000/api/metrics/activity?limit=6");
+        const token = localStorage.getItem("authToken");
+        const res = await fetch("http://localhost:8000/api/metrics/activity?limit=6", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
         if (!res.ok) return;
         const data = await res.json();
         const transformed = data.map((act: any) => ({

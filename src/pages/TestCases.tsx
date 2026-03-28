@@ -245,10 +245,10 @@ export default function TestCases() {
             onChange={(e) => setSelectedProject(Number(e.target.value))}
             className="mt-2 rounded border border-input bg-background px-3 py-2"
           >
-            {projects.length === 0 ? (
+            {!Array.isArray(projects) || projects.length === 0 ? (
               <option value="">No projects</option>
             ) : (
-              projects.map((p) => (
+              projects.map((p: any) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))
             )}

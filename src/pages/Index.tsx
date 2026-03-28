@@ -38,6 +38,7 @@ interface ProjectData {
   risk_score?: number;
   coverage_percent?: number;
   defects_open?: number;
+  team_count?: number;
 }
 
 interface Activity {
@@ -104,6 +105,11 @@ export default function Index() {
       const metricsRes = await fetch("http://localhost:8000/api/metrics/dashboard", {
         headers: { "Authorization": `Bearer ${token}` }
       });
+      if (metricsRes.status === 401) {
+        localStorage.removeItem("authToken");
+        window.location.href = "/login";
+        return;
+      }
       let metricsData: Metrics | null = null;
       if (metricsRes.ok) {
         metricsData = await metricsRes.json();
@@ -117,6 +123,11 @@ export default function Index() {
         const activityRes = await fetch("http://localhost:8000/api/metrics/activity", {
           headers: { "Authorization": `Bearer ${token}` }
         });
+        if (activityRes.status === 401) {
+          localStorage.removeItem("authToken");
+          window.location.href = "/login";
+          return;
+        }
         let activityData: any[] = [];
         if (activityRes.ok) {
           activityData = await activityRes.json();
@@ -331,13 +342,13 @@ export default function Index() {
                     id={String(project.id)}
                     name={project.name}
                     description={project.description}
-                    riskScore={parseFloat((Math.random() * 50 + 20).toFixed(1))}
-                    coveragePercent={parseFloat((75 + Math.random() * 20).toFixed(1))}
-                    defectsOpen={Math.floor(Math.random() * 15)}
+                    riskScore={project.risk_score || 0}
+                    coveragePercent={project.coverage_percent || 0}
+                    defectsOpen={project.defects_open || 0}
                     releaseDate={new Date(
                       project.target_release_date
                     ).toLocaleDateString()}
-                    team={3}
+                    team={project.team_count || 0}
                     status={(project.status as "on-track" | "at-risk" | "blocked") || "on-track"}
                   />
                 ))}

@@ -101,6 +101,11 @@ export function Header() {
         const res = await fetch("http://localhost:8000/api/notifications", {
           headers: { "Authorization": `Bearer ${token}` }
         });
+        if (res.status === 401) {
+          localStorage.removeItem("authToken");
+          window.location.href = "/login";
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
           setNotifications(data);

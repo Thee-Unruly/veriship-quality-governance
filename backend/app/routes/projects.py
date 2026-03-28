@@ -56,6 +56,10 @@ class ProjectResponse(BaseModel):
     target_release_date: Optional[datetime]
     created_at: datetime
     updated_at: datetime
+    coverage_percent: float = 0.0
+    defects_open: int = 0
+    team_count: int = 0
+    risk_score: float = 0.0
 
     class Config:
         from_attributes = True
@@ -88,13 +92,44 @@ def list_projects(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """List only projects assigned to the current user."""
+    """List projects assigned to the current user with summary stats."""
     user_project_ids = get_user_project_ids(db, current_user.id)
     
     projects = db.query(Project).filter(
         Project.id.in_(user_project_ids)
     ).all()
-    return projects
+    
+    from sqlalchemy import func
+    from app.models import Requirement, TestCase, Defect, DefectStatus, TeamMember
+    
+    results = []
+    for p in projects:
+        # Calculate summary stats for each project
+        req_count = db.query(func.count(Requirement.id)).filter(Requirement.project_id == p.id).scalar() or 0
+        tc_count = db.query(func.count(TestCase.id)).filter(TestCase.project_id == p.id).scalar() or 0
+        open_defects = db.query(func.count(Defect.id)).filter(
+            Defect.project_id == p.id,
+            Defect.status.in_([DefectStatus.OPEN, DefectStatus.IN_PROGRESS])
+        ).scalar() or 0
+        team_count = db.query(func.count(TeamMember.id)).filter(TeamMember.project_id == p.id).scalar() or 0
+        
+        coverage = round((tc_count / max(1, req_count) * 100), 1) if req_count > 0 else 0.0
+        
+        # Risk calculation
+        defect_ratio = (open_defects / max(1, tc_count)) * 50
+        coverage_ratio = (req_count / max(1, tc_count)) * 30
+        risk_score = min(100, max(0, defect_ratio + coverage_ratio))
+        
+        # Convert model to dict and inject metrics
+        p_dict = {c.name: getattr(p, c.name) for c in p.__table__.columns}
+        p_dict["coverage_percent"] = coverage
+        p_dict["defects_open"] = open_defects
+        p_dict["team_count"] = team_count
+        p_dict["risk_score"] = round(risk_score, 1)
+        
+        results.append(ProjectResponse(**p_dict))
+        
+    return results
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
@@ -103,7 +138,7 @@ def get_project(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    """Get a specific project if the user is authorized."""
+    """Get a specific project with summary stats."""
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -111,7 +146,31 @@ def get_project(
     # Ownership Check using helper
     assert_project_access(db, project_id, current_user.id)
     
-    return project
+    from sqlalchemy import func
+    from app.models import Requirement, TestCase, Defect, DefectStatus, TeamMember
+    
+    req_count = db.query(func.count(Requirement.id)).filter(Requirement.project_id == project_id).scalar() or 0
+    tc_count = db.query(func.count(TestCase.id)).filter(TestCase.project_id == project_id).scalar() or 0
+    open_defects = db.query(func.count(Defect.id)).filter(
+        Defect.project_id == project_id,
+        Defect.status.in_([DefectStatus.OPEN, DefectStatus.IN_PROGRESS])
+    ).scalar() or 0
+    team_count = db.query(func.count(TeamMember.id)).filter(TeamMember.project_id == project_id).scalar() or 0
+    
+    coverage = round((tc_count / max(1, req_count) * 100), 1) if req_count > 0 else 0.0
+    
+    # Risk calculation
+    defect_ratio = (open_defects / max(1, tc_count)) * 50
+    coverage_ratio = (req_count / max(1, tc_count)) * 30
+    risk_score = min(100, max(0, defect_ratio + coverage_ratio))
+    
+    p_dict = {c.name: getattr(project, c.name) for c in project.__table__.columns}
+    p_dict["coverage_percent"] = coverage
+    p_dict["defects_open"] = open_defects
+    p_dict["team_count"] = team_count
+    p_dict["risk_score"] = round(risk_score, 1)
+    
+    return ProjectResponse(**p_dict)
 
 
 @router.post("/", response_model=ProjectResponse)

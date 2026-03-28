@@ -31,10 +31,18 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                     "Authorization": `Bearer ${token}`
                 },
             });
+            if (res.status === 401) {
+                localStorage.removeItem("authToken");
+                window.location.href = "/login";
+                return;
+            }
+
             const data = await res.json();
             // debug log to help trace why UI might show stale projects
             try { console.debug("[ProjectsContext] fetched projects:", data); } catch (e) { }
-            setProjects(data || []);
+            
+            // Ensure data is an array before setting state to avoid crashes
+            setProjects(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error("Error fetching projects:", err);
             setProjects([]);
