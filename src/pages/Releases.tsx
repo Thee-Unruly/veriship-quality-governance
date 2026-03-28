@@ -33,7 +33,11 @@ export default function Releases() {
       return;
     }
 
-    fetch(`http://localhost:8000/api/releases/${selectedProject}`)
+    const token = localStorage.getItem("authToken");
+
+    fetch(`http://localhost:8000/api/releases/${selectedProject}`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    })
       .then((res) => res.json())
       .then((data) => {
         setReleases(data);

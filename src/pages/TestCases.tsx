@@ -44,8 +44,11 @@ export default function TestCases() {
       return;
     }
 
+    const token = localStorage.getItem("authToken");
     try {
-      const res = await fetch(`http://localhost:8000/api/test-cases/${selectedProject}?status=${currentTab}`);
+      const res = await fetch(`http://localhost:8000/api/test-cases/${selectedProject}?status=${currentTab}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       const data = await res.json();
       setTestCases(data);
     } catch (err) {
@@ -60,8 +63,11 @@ export default function TestCases() {
       setRequirementsMap({});
       return;
     }
+    const token = localStorage.getItem("authToken");
     try {
-      const res = await fetch(`http://localhost:8000/api/requirements/${selectedProject}`);
+      const res = await fetch(`http://localhost:8000/api/requirements/${selectedProject}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       const data = await res.json();
       const map: Record<number, string> = {};
       (data || []).forEach((r: any) => { map[r.id] = r.title; });
@@ -161,10 +167,14 @@ export default function TestCases() {
   };
 
   const handleStatusChange = async (id: number, status: string) => {
+    const token = localStorage.getItem("authToken");
     try {
       await fetch(`http://localhost:8000/api/test-cases/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ status }),
       });
       fetchTestCases();

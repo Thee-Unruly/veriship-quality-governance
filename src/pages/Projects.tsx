@@ -45,8 +45,11 @@ export default function Projects() {
   };
 
   const fetchTeamMembers = async (projectId: number) => {
+    const token = localStorage.getItem("authToken");
     try {
-      const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team/`);
+      const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
@@ -64,10 +67,14 @@ export default function Projects() {
       return;
     }
 
+    const token = localStorage.getItem("authToken");
     try {
-      const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team/`, {
+      const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           name: newMemberName,
           email: newMemberEmail || null,
@@ -94,9 +101,11 @@ export default function Projects() {
   const handleDeleteTeamMember = async (projectId: number, memberId: number) => {
     if (!confirm("Remove this team member?")) return;
 
+    const token = localStorage.getItem("authToken");
     try {
       const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team/${memberId}`, {
         method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
       });
 
       if (res.ok) {
@@ -113,10 +122,14 @@ export default function Projects() {
       return;
     }
 
+    const token = localStorage.getItem("authToken");
     try {
       const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team/${memberId}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({
           name: editingMember.name,
           email: editingMember.email || null,

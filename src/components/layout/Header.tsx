@@ -96,8 +96,11 @@ export function Header() {
     // Poll for notifications every minute or on mount
     const fetchNotifications = async () => {
       setLoadingNotifications(true);
+      const token = localStorage.getItem("authToken");
       try {
-        const res = await fetch("http://localhost:8000/api/notifications/");
+        const res = await fetch("http://localhost:8000/api/notifications", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
         if (res.ok) {
           const data = await res.json();
           setNotifications(data);

@@ -50,8 +50,11 @@ export default function Requirements() {
       return;
     }
 
+    const token = localStorage.getItem("authToken");
     try {
-      const response = await fetch(`http://localhost:8000/api/requirements/${selectedProject}`);
+      const response = await fetch(`http://localhost:8000/api/requirements/${selectedProject}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
       const data = await response.json();
       setRequirements(data);
       setLoading(false);

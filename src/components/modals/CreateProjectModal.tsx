@@ -77,12 +77,16 @@ export function CreateProjectModal({
         // If project created successfully and we have team members, add them
         if (result && result.id && teamMembers.length > 0) {
             const validMembers = teamMembers.filter(m => m.name.trim() && m.email.trim());
+            const token = localStorage.getItem("authToken");
 
             for (const member of validMembers) {
                 try {
-                    const response = await fetch(`http://localhost:8000/api/projects/${result.id}/team/`, {
+                    const response = await fetch(`http://localhost:8000/api/projects/${result.id}/team`, {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: { 
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${token}`
+                        },
                         body: JSON.stringify(member),
                     });
 

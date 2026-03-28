@@ -76,76 +76,122 @@ export default function Index() {
   const [releaseApprovals, setReleaseApprovals] = useState<{ [releaseId: number]: ApproverData[] }>({});
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
+    setError(null);
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      setError("No authentication token found. Please log in.");
+      setLoading(false);
+      return;
+    }
+
     try {
       // Fetch projects
-      const projectsRes = await fetch("http://localhost:8000/api/projects/");
-      const projectsData = await projectsRes.json();
-      setProjects(projectsData);
+      const projectsRes = await fetch("http://localhost:8000/api/projects/", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      let projectsData: ProjectData[] = [];
+      if (projectsRes.ok) {
+        projectsData = await projectsRes.json();
+      } else {
+        setError("Failed to fetch projects: " + projectsRes.status);
+      }
+      setProjects(Array.isArray(projectsData) ? projectsData : []);
 
       // Fetch metrics
-      const metricsRes = await fetch("http://localhost:8000/api/metrics/dashboard");
-      const metricsData = await metricsRes.json();
+      const metricsRes = await fetch("http://localhost:8000/api/metrics/dashboard", {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      let metricsData: Metrics | null = null;
+      if (metricsRes.ok) {
+        metricsData = await metricsRes.json();
+      } else {
+        setError("Failed to fetch metrics: " + metricsRes.status);
+      }
       setMetrics(metricsData);
 
       // Fetch activity
       try {
-        const activityRes = await fetch("http://localhost:8000/api/metrics/activity");
-        const activityData = await activityRes.json();
-        // Transform backend activity format to frontend format
-        const transformedActivities = activityData.map((act: any) => ({
-          id: act.id,
-          type: act.activity_type as any,
-          user: { name: "System" },
-          action: act.description.split(":")[0].toLowerCase(),
-          target: act.description.split(":")[1]?.trim() || "",
-          project: act.project_name,
-          timestamp: new Date(act.timestamp),
-        })) as Activity[];
+        const activityRes = await fetch("http://localhost:8000/api/metrics/activity", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        let activityData: any[] = [];
+        if (activityRes.ok) {
+          activityData = await activityRes.json();
+        } else {
+          setError("Failed to fetch activity: " + activityRes.status);
+        }
+        const transformedActivities = Array.isArray(activityData)
+          ? activityData.map((act: any) => ({
+            id: act.id,
+            type: act.activity_type as any,
+            user: { name: "System" },
+            action: act.description?.split(":")[0]?.toLowerCase() || "",
+            target: act.description?.split(":")[1]?.trim() || "",
+            project: act.project_name,
+            timestamp: new Date(act.timestamp),
+          }))
+          : [];
         setActivities(transformedActivities.slice(0, 5));
       } catch (err) {
-        console.error("Error fetching activity:", err);
+        setError("Error fetching activity");
+        setActivities([]);
       }
 
       // Fetch releases
       try {
-        const releasesRes = await fetch("http://localhost:8000/api/releases/");
-        const releasesData = await releasesRes.json();
-        const pendingReleases = releasesData.filter((r: any) => r.status !== "released").slice(0, 3);
+        const releasesRes = await fetch("http://localhost:8000/api/releases/", {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        let releasesData: any[] = [];
+        if (releasesRes.ok) {
+          releasesData = await releasesRes.json();
+        } else {
+          setError("Failed to fetch releases: " + releasesRes.status);
+        }
+        const pendingReleases = Array.isArray(releasesData)
+          ? releasesData.filter((r: any) => r.status !== "released").slice(0, 3)
+          : [];
         setReleases(pendingReleases);
 
         // Fetch approvals for each release
         for (const release of pendingReleases) {
           try {
-            const approvalsRes = await fetch(`http://localhost:8000/api/releases/${release.id}/approvals`);
-            const approvalsData = await approvalsRes.json();
-
-            // Transform to frontend format
-            const transformedApprovals = approvalsData.map((approval: any) => ({
-              id: approval.id.toString(),
-              name: approval.approver_name,
-              role: approval.approver_role || "Team Member",
-              status: approval.status.toLowerCase() as "approved" | "pending" | "rejected",
-              timestamp: approval.approved_at ? new Date(approval.approved_at).toLocaleString() : undefined,
-            }));
-
+            const approvalsRes = await fetch(`http://localhost:8000/api/releases/${release.id}/approvals`, {
+              headers: { "Authorization": `Bearer ${token}` }
+            });
+            let approvalsData: any[] = [];
+            if (approvalsRes.ok) {
+              approvalsData = await approvalsRes.json();
+            }
+            const transformedApprovals = Array.isArray(approvalsData)
+              ? approvalsData.map((approval: any) => ({
+                id: approval.id.toString(),
+                name: approval.approver_name,
+                role: approval.approver_role || "Team Member",
+                status: approval.status?.toLowerCase() as "approved" | "pending" | "rejected",
+                timestamp: approval.approved_at ? new Date(approval.approved_at).toLocaleString() : undefined,
+              }))
+              : [];
             setReleaseApprovals(prev => ({
               ...prev,
               [release.id]: transformedApprovals
             }));
           } catch (err) {
-            console.error(`Error fetching approvals for release ${release.id}:`, err);
+            // Ignore approval errors for now
           }
         }
       } catch (err) {
-        console.error("Error fetching releases:", err);
+        setError("Error fetching releases");
+        setReleases([]);
       }
 
       setLastUpdated(new Date());
       setLoading(false);
     } catch (err) {
-      console.error("Error fetching data:", err);
+      setError("Error fetching data");
       setLoading(false);
     }
   };
@@ -159,7 +205,9 @@ export default function Index() {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading || !metrics) return <div className="p-6">Loading dashboard...</div>;
+  if (loading) return <div className="p-6">Loading dashboard...</div>;
+  if (error) return <div className="p-6 text-red-600">{error}</div>;
+  if (!metrics) return <div className="p-6 text-red-600">No metrics data available.</div>;
 
   return (
     <DashboardLayout>
@@ -198,7 +246,7 @@ export default function Index() {
           <MetricCard
             title="Test Cases"
             value={metrics.total_test_cases}
-            subtitle={`${metrics.test_pass_rate.toFixed(1)}% pass rate`}
+            subtitle={`${typeof metrics.test_pass_rate === "number" ? metrics.test_pass_rate.toFixed(1) : "0.0"}% pass rate`}
             trend={{ value: 8, label: "this month" }}
             icon={<CheckSquare className="h-5 w-5 text-muted-foreground" />}
           />
@@ -234,29 +282,29 @@ export default function Index() {
               </div>
               <div className="flex items-center justify-around flex-wrap gap-4">
                 <RiskGauge
-                  score={Math.min(100, Math.max(0, parseFloat(metrics.overall_risk_score.toFixed(1))))}
+                  score={Math.min(100, Math.max(0, parseFloat(typeof metrics.overall_risk_score === "number" ? metrics.overall_risk_score.toFixed(1) : "0.0")))}
                   label="Overall Risk Index"
                   size="lg"
                 />
                 <div className="h-32 w-px bg-border" />
                 <div className="grid grid-cols-2 gap-6">
                   <RiskGauge
-                    score={Math.min(100, Math.max(0, parseFloat(metrics.coverage_percent.toFixed(1))))}
+                    score={Math.min(100, Math.max(0, parseFloat(typeof metrics.coverage_percent === "number" ? metrics.coverage_percent.toFixed(1) : "0.0")))}
                     label="Coverage %"
                     size="sm"
                   />
                   <RiskGauge
-                    score={Math.min(100, Math.max(0, parseFloat(((metrics.open_defects / Math.max(1, metrics.total_test_cases)) * 100).toFixed(1))))}
+                    score={Math.min(100, Math.max(0, parseFloat(typeof metrics.open_defects === "number" && typeof metrics.total_test_cases === "number" ? ((metrics.open_defects / Math.max(1, metrics.total_test_cases)) * 100).toFixed(1) : "0.0")))}
                     label="Defect Density"
                     size="sm"
                   />
                   <RiskGauge
-                    score={Math.min(100, Math.max(0, parseFloat(metrics.test_pass_rate.toFixed(1))))}
+                    score={Math.min(100, Math.max(0, parseFloat(typeof metrics.test_pass_rate === "number" ? metrics.test_pass_rate.toFixed(1) : "0.0")))}
                     label="Test Pass Rate"
                     size="sm"
                   />
                   <RiskGauge
-                    score={Math.min(100, Math.max(0, parseFloat((100 - (metrics.critical_defects / Math.max(1, metrics.total_defects) * 100)).toFixed(1))))}
+                    score={Math.min(100, Math.max(0, parseFloat(typeof metrics.critical_defects === "number" && typeof metrics.total_defects === "number" ? (100 - (metrics.critical_defects / Math.max(1, metrics.total_defects) * 100)).toFixed(1) : "0.0")))}
                     label="Release Ready"
                     size="sm"
                   />

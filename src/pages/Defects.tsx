@@ -32,7 +32,11 @@ export default function Defects() {
       return;
     }
 
-    fetch(`http://localhost:8000/api/defects/${selectedProject}`)
+    const token = localStorage.getItem("authToken");
+
+    fetch(`http://localhost:8000/api/defects/${selectedProject}`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    })
       .then((res) => res.json())
       .then((data) => {
         setDefects(data);

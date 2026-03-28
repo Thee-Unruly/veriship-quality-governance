@@ -10,12 +10,20 @@ export function useCrud<T extends { id?: number }>(options: UseCrudOptions) {
     const { baseUrl, onSuccess } = options;
     const [loading, setLoading] = useState(false);
 
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem("authToken");
+        return token ? { "Authorization": `Bearer ${token}` } : {};
+    };
+
     const create = async (data: Omit<T, "id">) => {
         setLoading(true);
         try {
             const response = await fetch(`${baseUrl}/`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    ...getAuthHeaders()
+                },
                 body: JSON.stringify(data),
             });
 
@@ -48,7 +56,10 @@ export function useCrud<T extends { id?: number }>(options: UseCrudOptions) {
         try {
             const response = await fetch(`${baseUrl}/${id}`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    ...getAuthHeaders()
+                },
                 body: JSON.stringify(data),
             });
 
@@ -73,6 +84,7 @@ export function useCrud<T extends { id?: number }>(options: UseCrudOptions) {
         try {
             const response = await fetch(`${baseUrl}/${id}`, {
                 method: "DELETE",
+                headers: getAuthHeaders(),
             });
 
             if (!response.ok) {
