@@ -13,12 +13,22 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [loading, setLoading] = useState(true);
 
     const fetchProjects = async () => {
+        // Don't fetch if there's no auth token
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+            setLoading(false);
+            return;
+        }
+        
         setLoading(true);
         try {
             const res = await fetch("http://localhost:8000/api/projects/?_=" + Date.now(), {
                 // ensure we don't receive a cached response
                 cache: "no-store",
-                headers: { "Cache-Control": "no-cache" },
+                headers: { 
+                    "Cache-Control": "no-cache",
+                    "Authorization": `Bearer ${token}`
+                },
             });
             const data = await res.json();
             // debug log to help trace why UI might show stale projects
