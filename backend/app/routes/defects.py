@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Defect, DefectSeverity, DefectStatus, User, UserProjectAssignment
-from app.auth import get_current_user
+from app.routes.auth import get_current_user
 from app.dependencies import assert_project_access, get_user_project_ids
 from app.utils import recalculate_project_status
 from pydantic import BaseModel, field_validator

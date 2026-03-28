@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Requirement, User, UserProjectAssignment
-from app.auth import get_current_user
+from app.routes.auth import get_current_user
 from app.dependencies import assert_project_access
 from app.config import settings
 import requests

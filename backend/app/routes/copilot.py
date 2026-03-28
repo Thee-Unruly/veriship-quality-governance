@@ -10,7 +10,7 @@ from sqlalchemy import and_
 from app.database import get_db
 from app.config import settings
 from app.models import Requirement, Release, Defect, DefectStatus, DefectSeverity, Project, CopilotPrompt, User
-from app.auth import get_current_user
+from app.routes.auth import get_current_user
 from app.dependencies import assert_read_permission, assert_create_permission
 from app.schemas.copilot import (
     RequirementClarityAnalysis,

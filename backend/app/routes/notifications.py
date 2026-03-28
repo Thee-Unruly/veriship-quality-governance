@@ -15,7 +15,7 @@ from app.models import (
     User, 
     UserProjectAssignment
 )
-from app.auth import get_current_user
+from app.routes.auth import get_current_user
 from app.dependencies import get_user_project_ids
 from pydantic import BaseModel
 from typing import List, Optional

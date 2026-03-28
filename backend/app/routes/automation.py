@@ -36,7 +36,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import TestCase, TestExecution, TestSuite, TestStatus, User
-from app.auth import get_current_user
+from app.routes.auth import get_current_user
 from app.dependencies import assert_create_permission, audit_log
 from app.schemas.automation import (
     ExecutionRequest,
