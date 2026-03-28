@@ -14,7 +14,9 @@ from fastapi.responses import StreamingResponse, FileResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Project
+from app.models import Project, User
+from app.auth import get_current_user
+from app.dependencies import assert_create_permission
 
 router = APIRouter()
 
@@ -235,7 +237,8 @@ async def _run_locust_test_async(
 def start_load_test(
     background_tasks: BackgroundTasks,
     payload: dict,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Start a load test.
@@ -269,6 +272,9 @@ def start_load_test(
         project = db.query(Project).filter(Project.id == project_id).first()
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
+        
+        # Authorization check - user must have create permission on the project
+        assert_create_permission(db, project_id, current_user.id)
     
     # Generate locustfile
     locustfile_content = _generate_locustfile(
@@ -492,12 +498,16 @@ def download_pdf_report(job_id: str):
 @router.get("/jobs")
 def list_load_tests(
     project_id: Optional[int] = Query(None),
-    limit: int = Query(50, ge=1, le=100)
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """List all load test jobs, optionally filtered by project."""
     jobs = list(LOAD_TEST_JOBS.values())
     
     if project_id:
+        # Authorization check - user must have access to the project
+        assert_create_permission(db, project_id, current_user.id)
         jobs = [j for j in jobs if j.get("project_id") == project_id]
     
     # Sort by created_at descending
@@ -510,11 +520,19 @@ def list_load_tests(
 
 
 @router.delete("/{job_id}")
-def delete_load_test(job_id: str):
+def delete_load_test(
+    job_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Delete a load test job and its reports."""
     job = LOAD_TEST_JOBS.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Authorization check - verify user has access to the project
+    if job.get("project_id"):
+        assert_create_permission(db, job["project_id"], current_user.id)
     
     # Delete reports
     report_dir = REPORTS_DIR / job_id

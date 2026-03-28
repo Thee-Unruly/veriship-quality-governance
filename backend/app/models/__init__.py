@@ -555,3 +555,25 @@ class Setting(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
+# ========== Audit & Compliance ==========
+
+class AuditLog(Base):
+    """Audit trail for tracking data modifications."""
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
+    table_name = Column(String(100), nullable=False, index=True)
+    record_id = Column(Integer, nullable=False)
+    operation = Column(String(50), nullable=False)  # INSERT, UPDATE, DELETE
+    
+    old_values = Column(JSON, nullable=True)  # Previous values before change
+    new_values = Column(JSON, nullable=True)  # New values after change
+    
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+    # Relationships
+    user = relationship("User")
+

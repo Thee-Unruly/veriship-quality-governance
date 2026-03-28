@@ -35,7 +35,9 @@ from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import TestCase, TestExecution, TestSuite, TestStatus
+from app.models import TestCase, TestExecution, TestSuite, TestStatus, User
+from app.auth import get_current_user
+from app.dependencies import assert_create_permission, audit_log
 from app.schemas.automation import (
     ExecutionRequest,
     SuiteExecutionRequest,
@@ -103,6 +105,7 @@ async def execute_test_case(
     request: Optional[ExecutionRequest] = None,
     executed_by: str = Query(default="automation", description="User or system executing the test"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Execute a single test case.
     
@@ -110,6 +113,8 @@ async def execute_test_case(
         test_case_id: ID of the test case to execute
         request: Execution configuration
         executed_by: User or system identifier
+        db: Database session
+        current_user: Current authenticated user
         
     Returns:
         ExecutionResponse with complete execution details
@@ -118,6 +123,9 @@ async def execute_test_case(
     test_case = db.query(TestCase).filter(TestCase.id == test_case_id).first()
     if not test_case:
         raise HTTPException(status_code=404, detail=f"Test case {test_case_id} not found")
+    
+    # Authorization check - user must have create permission on the project
+    assert_create_permission(db, test_case.project_id, current_user.id)
     
     # Build execution config
     config = None
@@ -201,12 +209,15 @@ async def execute_test_suite(
     suite_id: int,
     request: Optional[SuiteExecutionRequest] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Execute all test cases in a test suite.
     
     Args:
         suite_id: ID of the test suite
         request: Execution configuration and options
+        db: Database session
+        current_user: Current authenticated user
         
     Returns:
         SuiteExecutionResponse with summary and individual results
@@ -215,6 +226,9 @@ async def execute_test_suite(
     suite = db.query(TestSuite).filter(TestSuite.id == suite_id).first()
     if not suite:
         raise HTTPException(status_code=404, detail=f"Test suite {suite_id} not found")
+    
+    # Authorization check - user must have create permission on the project
+    assert_create_permission(db, suite.project_id, current_user.id)
     
     # Build config
     config = None

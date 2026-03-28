@@ -9,7 +9,9 @@ from sqlalchemy import and_
 
 from app.database import get_db
 from app.config import settings
-from app.models import Requirement, Release, Defect, DefectStatus, DefectSeverity, Project, CopilotPrompt
+from app.models import Requirement, Release, Defect, DefectStatus, DefectSeverity, Project, CopilotPrompt, User
+from app.auth import get_current_user
+from app.dependencies import assert_read_permission, assert_create_permission
 from app.schemas.copilot import (
     RequirementClarityAnalysis,
     TestCaseGenerationResult,
@@ -140,7 +142,8 @@ def call_openrouter(api_key: str, user_message: str) -> str:
 )
 def analyze_requirement_clarity(
     requirement_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Analyzes the clarity of a specific requirement using OpenRouter AI.
@@ -148,6 +151,9 @@ def analyze_requirement_clarity(
     requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
     if not requirement:
         raise HTTPException(status_code=404, detail="Requirement not found")
+    
+    # Authorization check - user must have read permission on the project
+    assert_read_permission(db, requirement.project_id, current_user.id)
 
     # Build AI prompt
     prompt = f"""Analyze the following requirement for clarity, testability, and completeness.
@@ -207,7 +213,8 @@ Only respond with valid JSON, no additional text."""
 )
 def generate_test_cases(
     requirement_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Generates test case ideas for a specific requirement using OpenRouter AI.
@@ -215,6 +222,9 @@ def generate_test_cases(
     requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
     if not requirement:
         raise HTTPException(status_code=404, detail="Requirement not found")
+    
+    # Authorization check - user must have read permission on the project
+    assert_read_permission(db, requirement.project_id, current_user.id)
 
     # Build AI prompt
     prompt = f"""Generate test cases for the following requirement:
@@ -343,7 +353,8 @@ Generate exactly {count} distinct scenarios. Return ONLY valid JSON, no extra te
 )
 def check_release_readiness(
     release_id: int,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     """
     Performs a readiness check for a specific release using OpenRouter AI.
@@ -351,6 +362,9 @@ def check_release_readiness(
     release = db.query(Release).filter(Release.id == release_id).first()
     if not release:
         raise HTTPException(status_code=404, detail="Release not found")
+    
+    # Authorization check - user must have read permission on the project
+    assert_read_permission(db, release.project_id, current_user.id)
 
     # --- Data Aggregation ---
     # Find all open, critical defects for this release's project
@@ -437,7 +451,11 @@ def copilot_status():
 
 
 @router.post("/apply-insight")
-def apply_insight(payload: dict, db: Session = Depends(get_db)):
+def apply_insight(
+    payload: dict, 
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Apply / persist an approved AI insight.
 
     This endpoint records the approved insight as a `QAInsight` entry for audit
@@ -460,6 +478,9 @@ def apply_insight(payload: dict, db: Session = Depends(get_db)):
     # Require a project to store the insight
     if not project_id:
         raise HTTPException(status_code=400, detail="project or project_id required to apply insight")
+    
+    # Authorization check - user must have create permission on the project
+    assert_create_permission(db, project_id, current_user.id)
 
     qa = QAInsight(
         project_id=project_id,
@@ -486,7 +507,10 @@ INSIGHTS_CACHE_TTL_SECONDS = 86400  # 24 hours
 
 
 @router.get("/insights")
-def get_ai_insights(db: Session = Depends(get_db)):
+def get_ai_insights(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
     """Return AI-driven or deterministic insights for the dashboard.
 
     If OpenRouter key is configured, request insights from the LLM. Otherwise

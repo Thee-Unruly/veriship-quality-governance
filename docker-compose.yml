@@ -76,6 +76,8 @@ services:
       - ./tsconfig.json:/app/tsconfig.json
       - ./tsconfig.app.json:/app/tsconfig.app.json
       - ./tsconfig.node.json:/app/tsconfig.node.json
+      - .:/app # Mount the root directory so package.json is included
+      - /app/node_modules
     networks:
       - veriship-network
 
