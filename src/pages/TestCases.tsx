@@ -1,22 +1,25 @@
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useProjects } from "@/context/ProjectsContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckSquare, Plus, Trash2, Edit2, Info, Play, RefreshCw } from "lucide-react";
+import { CheckSquare, Plus, Trash2, Edit2, Info, Play, RefreshCw, Upload } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateTestCaseModal } from "@/components/modals/CreateTestCaseModal";
 import { EditTestCaseModal } from "@/components/modals/EditTestCaseModal";
 import { RunTestSimulationModal } from "@/components/modals/RunTestSimulationModal";
 import { useCrud } from "@/hooks/use-crud";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
+import { useToast } from "@/components/ui/use-toast";
+import { normalizeStatus, parsePriority, parseSpreadsheetFile, pickImportValue } from "@/lib/spreadsheet-import";
 
 export default function TestCases() {
   const [testCases, setTestCases] = useState([]);
   const [filteredTestCases, setFilteredTestCases] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [requirementsMap, setRequirementsMap] = useState<Record<number, string>>({});
+  const [requirementTitleMap, setRequirementTitleMap] = useState<Record<string, number>>({});
   const [currentTab, setCurrentTab] = useState<"ongoing" | "retest" | "pass" | "fail">("ongoing");
   const { projects, loading: projectsLoading, refresh } = useProjects();
   const [selectedProject, setSelectedProject] = useState<number | "">("");
@@ -24,6 +27,8 @@ export default function TestCases() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState<any>(null);
   const [isRunTestModalOpen, setIsRunTestModalOpen] = useState(false);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const { toast } = useToast();
 
   const getPriorityLabel = (priority: number) => {
     switch (priority) {
@@ -70,8 +75,13 @@ export default function TestCases() {
       });
       const data = await res.json();
       const map: Record<number, string> = {};
-      (data || []).forEach((r: any) => { map[r.id] = r.title; });
+      const titleMap: Record<string, number> = {};
+      (data || []).forEach((r: any) => {
+        map[r.id] = r.title;
+        if (r.title) titleMap[String(r.title).toLowerCase().trim()] = r.id;
+      });
       setRequirementsMap(map);
+      setRequirementTitleMap(titleMap);
     } catch (err) {
       console.error("Error fetching requirements for test cases grouping:", err);
     }
@@ -166,12 +176,85 @@ export default function TestCases() {
     setIsRunTestModalOpen(true);
   };
 
+  const handleImportTestCases = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+    if (typeof selectedProject !== "number") {
+      toast({ title: "Select a project first", description: "Choose a project before importing test cases.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("authToken");
+      const rows = await parseSpreadsheetFile(file);
+
+      if (rows.length === 0) {
+        toast({ title: "No data found", description: "The selected file does not contain importable rows.", variant: "destructive" });
+        return;
+      }
+
+      let importedCount = 0;
+      let skippedCount = 0;
+
+      for (const row of rows) {
+        const title = pickImportValue(row, ["title", "test case", "test case title", "name"]);
+        if (!title) {
+          skippedCount += 1;
+          continue;
+        }
+
+        const requirementText = pickImportValue(row, ["requirement id", "requirement_id", "requirement", "requirement title"]);
+        const parsedRequirementId = Number.parseInt(requirementText, 10);
+        const requirementId = Number.isFinite(parsedRequirementId)
+          ? parsedRequirementId
+          : requirementTitleMap[requirementText.toLowerCase().trim()];
+
+        const payload = {
+          project_id: selectedProject,
+          requirement_id: requirementId || undefined,
+          test_case_id: pickImportValue(row, ["test case id", "test_case_id", "id"]) || undefined,
+          title,
+          description: pickImportValue(row, ["description", "details", "desc"]) || undefined,
+          test_type: pickImportValue(row, ["test type", "test_type", "type"]) || "manual",
+          priority: parsePriority(pickImportValue(row, ["priority", "priority level"]), 3),
+          status: normalizeStatus(pickImportValue(row, ["status", "state"]), ["ongoing", "retest", "pass", "fail"], "ongoing"),
+        };
+
+        const response = await fetch("http://localhost:8000/api/test-cases/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          importedCount += 1;
+        } else {
+          skippedCount += 1;
+        }
+      }
+
+      await fetchTestCases();
+      toast({
+        title: "Import completed",
+        description: `Imported ${importedCount} test case(s)${skippedCount ? `, skipped ${skippedCount}` : ""}.`,
+      });
+    } catch (error) {
+      console.error("Test case import failed", error);
+      toast({ title: "Import failed", description: "Could not parse or import the file.", variant: "destructive" });
+    }
+  };
+
   const handleStatusChange = async (id: number, status: string) => {
     const token = localStorage.getItem("authToken");
     try {
       await fetch(`http://localhost:8000/api/test-cases/${id}`, {
         method: "PUT",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
@@ -227,6 +310,17 @@ export default function TestCases() {
             <p className="text-muted-foreground">Design, execute, and manage test cases</p>
           </div>
           <div className="flex items-center gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              className="hidden"
+              onChange={handleImportTestCases}
+            />
+            <Button onClick={() => importInputRef.current?.click()} variant="outline">
+              <Upload className="h-4 w-4 mr-2" />
+              Import File
+            </Button>
             <Button onClick={handleRefresh} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh

@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useProjects } from "@/context/ProjectsContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, Plus, Trash2, Edit2, Sparkles, Loader2, Beaker, Play, RefreshCw } from "lucide-react";
+import { Plus, Trash2, Edit2, Sparkles, Loader2, Beaker, Play, RefreshCw, Upload } from "lucide-react";
 import { CreateRequirementModal } from "@/components/modals/CreateRequirementModal";
 import { EditRequirementModal } from "@/components/modals/EditRequirementModal";
 import { GeneratedTestsModal } from "@/components/modals/GeneratedTestsModal";
@@ -13,6 +13,7 @@ import { AnalyzeRequirementModal } from "@/components/copilot/AnalyzeRequirement
 import { GenerateTestCasesModal } from "@/components/copilot/GenerateTestCasesModal";
 import { useCrud } from "@/hooks/use-crud";
 import { useToast } from "@/components/ui/use-toast";
+import { parseDelimitedList, parsePriority, parseSpreadsheetFile, pickImportValue } from "@/lib/spreadsheet-import";
 
 export default function Requirements() {
   const [requirements, setRequirements] = useState([]);
@@ -29,6 +30,7 @@ export default function Requirements() {
 
   const [analysisLoading, setAnalysisLoading] = useState<{ [key: number]: boolean }>({});
   const [generatedTests, setGeneratedTests] = useState([]);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const getPriorityLabel = (priority: number) => {
     switch (priority) {
@@ -172,6 +174,76 @@ export default function Requirements() {
     setIsGenerateAndRunModalOpen(true);
   };
 
+  const handleImportRequirements = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+    if (typeof selectedProject !== "number") {
+      toast({ title: "Select a project first", description: "Choose a project before importing requirements.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("authToken");
+      const rows = await parseSpreadsheetFile(file);
+
+      if (rows.length === 0) {
+        toast({ title: "No data found", description: "The selected file does not contain importable rows.", variant: "destructive" });
+        return;
+      }
+
+      let importedCount = 0;
+      let skippedCount = 0;
+
+      for (const row of rows) {
+        const title = pickImportValue(row, ["title", "requirement title", "requirement", "name", "summary"]);
+        if (!title) {
+          skippedCount += 1;
+          continue;
+        }
+
+        const description = pickImportValue(row, ["description", "details", "desc"]);
+        const acceptance = pickImportValue(row, ["acceptance criteria", "acceptance_criteria", "criteria"]);
+        const requirementId = pickImportValue(row, ["requirement id", "requirement_id", "id"]);
+        const priority = parsePriority(pickImportValue(row, ["priority", "priority level"]), 3);
+
+        const payload = {
+          project_id: selectedProject,
+          requirement_id: requirementId || undefined,
+          title,
+          description: description || title,
+          acceptance_criteria: parseDelimitedList(acceptance),
+          priority,
+        };
+
+        const response = await fetch("http://localhost:8000/api/requirements/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          importedCount += 1;
+        } else {
+          skippedCount += 1;
+        }
+      }
+
+      await fetchRequirements();
+      toast({
+        title: "Import completed",
+        description: `Imported ${importedCount} requirement(s)${skippedCount ? `, skipped ${skippedCount}` : ""}.`,
+      });
+    } catch (error) {
+      console.error("Requirement import failed", error);
+      toast({ title: "Import failed", description: "Could not parse or import the file.", variant: "destructive" });
+    }
+  };
+
   if (loading) return <div className="p-6">Loading requirements...</div>;
 
   return (
@@ -180,6 +252,17 @@ export default function Requirements() {
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">Requirements</h1>
           <div className="flex items-center gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              className="hidden"
+              onChange={handleImportRequirements}
+            />
+            <Button onClick={() => importInputRef.current?.click()} variant="outline">
+              <Upload className="h-4 w-4 mr-2" />
+              Import File
+            </Button>
             <Button onClick={handleRefresh} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh

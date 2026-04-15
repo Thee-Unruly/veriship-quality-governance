@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useProjects } from "@/context/ProjectsContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bug, Plus, Trash2, Edit2, RefreshCw } from "lucide-react";
+import { Bug, Plus, Trash2, Edit2, RefreshCw, Upload } from "lucide-react";
 import { CreateDefectModal } from "@/components/modals/CreateDefectModal";
 import { EditDefectModal } from "@/components/modals/EditDefectModal";
 import { useCrud } from "@/hooks/use-crud";
+import { useToast } from "@/components/ui/use-toast";
+import { parseSpreadsheetFile, pickImportValue } from "@/lib/spreadsheet-import";
 
 export default function Defects() {
   const [defects, setDefects] = useState([]);
@@ -19,6 +21,8 @@ export default function Defects() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedDefect, setSelectedDefect] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<string | "">("");
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const { toast } = useToast();
 
   const { delete: deleteDefect } = useCrud({
     baseUrl: "http://localhost:8000/api/defects",
@@ -140,6 +144,72 @@ export default function Defects() {
     setIsEditModalOpen(true);
   };
 
+  const handleImportDefects = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+    if (typeof selectedProject !== "number") {
+      toast({ title: "Select a project first", description: "Choose a project before importing defects.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("authToken");
+      const rows = await parseSpreadsheetFile(file);
+
+      if (rows.length === 0) {
+        toast({ title: "No data found", description: "The selected file does not contain importable rows.", variant: "destructive" });
+        return;
+      }
+
+      let importedCount = 0;
+      let skippedCount = 0;
+
+      for (const row of rows) {
+        const title = pickImportValue(row, ["title", "defect", "defect title", "name"]);
+        if (!title) {
+          skippedCount += 1;
+          continue;
+        }
+
+        const severity = pickImportValue(row, ["severity", "level"]).toLowerCase() || "medium";
+        const payload = {
+          project_id: selectedProject,
+          defect_id: pickImportValue(row, ["defect id", "defect_id", "id"]) || undefined,
+          title,
+          description: pickImportValue(row, ["description", "details", "desc"]) || undefined,
+          severity,
+          found_by: pickImportValue(row, ["found by", "found_by", "reporter", "owner"]) || undefined,
+        };
+
+        const response = await fetch("http://localhost:8000/api/defects/", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          importedCount += 1;
+        } else {
+          skippedCount += 1;
+        }
+      }
+
+      fetchDefects();
+      toast({
+        title: "Import completed",
+        description: `Imported ${importedCount} defect(s)${skippedCount ? `, skipped ${skippedCount}` : ""}.`,
+      });
+    } catch (error) {
+      console.error("Defect import failed", error);
+      toast({ title: "Import failed", description: "Could not parse or import the file.", variant: "destructive" });
+    }
+  };
+
   if (loading) return <div className="p-6">Loading defects...</div>;
 
   const getSeverityColor = (severity) => {
@@ -166,6 +236,17 @@ export default function Defects() {
             <p className="text-muted-foreground">Track and manage defects across projects</p>
           </div>
           <div className="flex items-center gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              className="hidden"
+              onChange={handleImportDefects}
+            />
+            <Button onClick={() => importInputRef.current?.click()} variant="outline">
+              <Upload className="h-4 w-4 mr-2" />
+              Import File
+            </Button>
             <Button onClick={handleRefresh} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
