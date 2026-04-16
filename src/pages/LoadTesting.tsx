@@ -66,7 +66,11 @@ export default function LoadTesting() {
 
     const fetchProjects = async () => {
         try {
-            const response = await fetch("http://localhost:8000/api/projects/");
+            const response = await fetch("http://localhost:8000/api/projects/", {
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("authToken")}`
+                }
+            });
             const data = await response.json();
             setProjects(data);
         } catch (error) {
@@ -76,7 +80,11 @@ export default function LoadTesting() {
 
     const fetchJobs = async () => {
         try {
-            const response = await fetch("http://localhost:8000/api/load-testing/jobs");
+            const response = await fetch("http://localhost:8000/api/load-testing/jobs", {
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("authToken")}`
+                }
+            });
             const data = await response.json();
             setJobs(data.jobs || []);
         } catch (error) {
@@ -98,7 +106,10 @@ export default function LoadTesting() {
 
             const response = await fetch("http://localhost:8000/api/load-testing/start", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("authToken")}`
+                },
                 body: JSON.stringify({
                     project_id: selectedProjectId ? parseInt(selectedProjectId) : null,
                     base_url: baseUrl,
@@ -117,8 +128,9 @@ export default function LoadTesting() {
             setCurrentJobId(data.job_id);
 
             // Connect to SSE
+            const token = localStorage.getItem("authToken") || "";
             const eventSource = new EventSource(
-                `http://localhost:8000/api/load-testing/${data.job_id}/events`
+                `http://localhost:8000/api/load-testing/${data.job_id}/events?token=${encodeURIComponent(token)}`
             );
 
             eventSource.onmessage = (event) => {
@@ -149,7 +161,12 @@ export default function LoadTesting() {
     const downloadPDF = async (jobId: string) => {
         try {
             const response = await fetch(
-                `http://localhost:8000/api/load-testing/${jobId}/report/pdf`
+                `http://localhost:8000/api/load-testing/${jobId}/report/pdf`,
+                {
+                    headers: {
+                        "Authorization": `Bearer ${localStorage.getItem("authToken")}`
+                    }
+                }
             );
             if (!response.ok) throw new Error("PDF download failed");
 

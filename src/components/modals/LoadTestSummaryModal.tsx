@@ -68,7 +68,11 @@ export function LoadTestSummaryModal({
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`http://localhost:8000/api/load-testing/${jobId}/summary`);
+            const response = await fetch(`http://localhost:8000/api/load-testing/${jobId}/summary`, {
+                headers: {
+                    "Authorization": `Bearer ${localStorage.getItem("authToken")}`
+                }
+            });
             if (response.ok) {
                 const data = await response.json();
                 setSummary(data);
