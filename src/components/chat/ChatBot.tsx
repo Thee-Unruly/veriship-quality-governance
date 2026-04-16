@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 // Updated n8n Q&A workflow Webhook (Production Endpoint)
-const N8N_WEBHOOK_URL = "https://heavily-busy-titmouse.ngrok-free.app/webhook/veriship-qa-chatbot";
+const N8N_WEBHOOK_URL = "https://heavily-busy-titmouse.ngrok-free.app/webhook/veriship-qa";
 
 function generateSessionId() {
   return "session-" + Math.random().toString(36).substring(2, 12);
@@ -62,19 +62,24 @@ export default function ChatBot() {
     try {
       const res = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "ngrok-skip-browser-warning": "true" 
+          "ngrok-skip-browser-warning": "true"
         },
-        body: JSON.stringify({ message: text, sessionId }),
+        body: JSON.stringify({
+          message: text,
+          sessionId,
+          user_id: JSON.parse(localStorage.getItem("user") || "{}")?.id || 0,
+          user_name: JSON.parse(localStorage.getItem("user") || "{}")?.username || "",
+        }),
       });
       const data = await res.json();
       console.log("n8n Response:", data);
 
       // Try every possible key that n8n/AI models use
       const reply =
-        data?.output || 
-        data?.response || 
+        data?.output ||
+        data?.response ||
         data?.text ||
         data?.[0]?.output ||
         data?.[0]?.response ||

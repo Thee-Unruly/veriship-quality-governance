@@ -1,7 +1,11 @@
 FROM python:3.11-slim
+
 WORKDIR /app
-RUN pip install "mcp[cli]==1.26.0" httpx uvicorn
+
+RUN pip install --no-cache-dir mcp httpx
+
 COPY veriship_mcp.py .
-ENV UVICORN_HOST=0.0.0.0
-ENV UVICORN_PORT=8001
-CMD ["python", "veriship_mcp.py", "sse"]
+
+EXPOSE 8001
+
+CMD ["python", "veriship_mcp.py"]

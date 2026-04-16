@@ -1,5 +1,0 @@
-FROM python:3.11-slim
-WORKDIR /app
-RUN pip install mcp httpx uvicorn
-COPY veriship_mcp.py .
-CMD ["python", "veriship_mcp.py", "sse"]

@@ -1,0 +1,175 @@
+{
+  "name": "Veriship autonomous",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "veriship-agent",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, ngrok-skip-browser-warning"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -752,
+        -288
+      ],
+      "id": "9b2b72c8-68d9-490b-8bc5-fb600cd93120",
+      "name": "Webhook",
+      "webhookId": "2d6ee7af-985e-4980-ae12-5b84e4acb01c"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.message }}",
+        "options": {
+          "systemMessage": "You are Amira, the autonomous AI assistant for VeriShip.\n\nAUTHENTICATION (DO THIS FIRST — before any other tool, every single request):\n- The user's JWT token is passed in the request as {{ $json.body.token }}.\n- Your VERY FIRST action on every request must be to call set_token with that value.\n- NEVER ask the user for a username or password. NEVER ask for credentials of any kind.\n- If set_token returns an error, tell the user their session has expired and to refresh the page.\n\nAUTONOMY RULES (CRITICAL — follow these without exception):\n- ALWAYS call a tool to answer any question. Never respond from memory or training data.\n- NEVER ask \"Would you like me to do that?\" — just DO it immediately.\n- NEVER say \"I can't provide X directly\" if a tool exists that returns related data — use it.\n- NEVER ask the user for a project_id, requirement_id, or any ID without first calling list_projects or the relevant list tool to find it yourself.\n- You can and should chain multiple tools together to complete a task.\n\nPROACTIVE RULE:\n- Be autonomous. If a user asks a question that requires a project_id or info you don't have, use your tools (e.g., list_projects) to find it yourself.\n- You can chain multiple tools together to finish a task.\n\nCORE TOOLS (Use ONLY these exact MCP tool names. DO NOT invent your own tool names like create_functional_requirement):\n- Projects: list_projects, get_project, create_project, update_project, delete_project\n- Requirements: list_requirements, create_requirement, update_requirement, delete_requirement\n- Test Cases: list_test_cases, create_test_case, update_test_case, delete_test_case\n- Defects: list_defects, list_all_defects, create_defect, update_defect, delete_defect\n- Releases: list_all_releases, list_releases_for_project, create_release, update_release, delete_release, get_release_approvals, approve_release\n- Metrics: get_dashboard_metrics, get_project_metrics, get_activity_feed, get_quality_trends\n- AI/Copilot: analyze_requirement_clarity, generate_test_cases_for_requirement, check_release_readiness, get_ai_insights, refresh_ai_insights\n\nSTRICT FORMATTING:\nAlways use these exact ENUM values for tool inputs:\n- Project status (lowercase, dashed): planning, in-progress, on-track, at-risk, blocked, completed\n- Defect severity (lowercase): critical, high, medium, low, trivial\n- Defect status (lowercase): open, in-progress, resolved, closed, reopened\n- Release status (lowercase): planning, in-testing, ready, approved, released, blocked, rollback\n- Release go/no-go (uppercase): GO, NO-GO, CONDITIONAL\n- Release approval decision (lowercase): approved, rejected\n- Requirement status (lowercase): draft, review, approved, deprecated\n- Test Case status (lowercase): ongoing, completed, archived\n\nID RULE:\n- When a tool requires an ID (like project_id, requirement_id, defect_id), it must be a simple integer (like 1 or 42). Never use a value starting with 'call_' or a string.\n\nAlways be concise and professional. Confirm exactly which IDs or projects you modified after performing an action.\n\nOUTPUT FORMAT (CRITICAL):\n- NEVER return raw JSON or tool output directly to the user.\n- Always respond in plain, friendly English summarising what was done.\n- Example: Instead of {\"name\": \"Payment Module\", \"id\": 5}, say: \"Done! I created the project **Payment Module** (ID: 5).\"\n- If listing items, use a short readable list, not JSON arrays.",
+          "maxIterations": 50
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -416,
+        -352
+      ],
+      "id": "c182fa2e-0014-40f0-8beb-6d18aac5005c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $node[\"AI Agent\"].json[\"output\"] }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/plain"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -48,
+        -176
+      ],
+      "id": "fe81ad6c-42e6-4b52-aefe-bfb3d535afe2",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "sseEndpoint": "http://host.docker.internal:8001/sse",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -112
+      ],
+      "id": "b53390fd-5a1e-41c1-8be8-b1acfcf5f2d2",
+      "name": "MCP Client"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        -144
+      ],
+      "id": "50090651-e8dc-499f-88f4-c1a0f65d7482",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "YD6eEVS31gS1q5Xx",
+          "name": "Veriship Agentic"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "46ed0954-8302-44e6-b48f-ad4a466deb40",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "317860ffddf6a439e942df3cbd50c296892f9e564126d3ec98f575f43ee8e726"
+  },
+  "id": "txxe7HFtsGkRNA2i",
+  "tags": []
+}

@@ -1,8 +1,6 @@
-# To start the backend service, run:
-# docker compose up app
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: veriship-postgres
     environment:
       POSTGRES_USER: veriship_user
@@ -13,12 +11,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U veriship_user -d veriship_db" ]
+      test: [ "CMD-SHELL", "pg_isready -U veriship_user" ]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - veriship-network
 
   redis:
     image: redis:7-alpine
@@ -30,31 +26,27 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - veriship-network
 
-  app:
+  backend:
     build:
-      context: ./backend
+      context: .
       dockerfile: Dockerfile
     container_name: veriship-app
-    env_file: ./backend/.env
     ports:
       - "8000:8000"
+    env_file:
+      - ./backend/.env
     environment:
       DATABASE_URL: postgresql://veriship_user:veriship_dev_password@postgres:5432/veriship_db
-      REDIS_URL: redis://redis:6379
-      ENVIRONMENT: development
-      CORS_ORIGINS: '["http://localhost:5173","http://localhost:8080"]'
+      REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     volumes:
-      - ./backend:/app
-    networks:
-      - veriship-network
+      - ./backend:/app/backend
+    command: python backend/run.py
 
   frontend:
     build:
@@ -63,45 +55,25 @@ services:
     container_name: veriship-frontend
     ports:
       - "5173:5173"
-    environment:
-      VITE_API_URL: http://localhost:8000
     depends_on:
-      - app
+      - backend
     volumes:
       - ./src:/app/src
       - ./public:/app/public
-      - ./index.html:/app/index.html
-      - ./vite.config.ts:/app/vite.config.ts
-      - ./tailwind.config.ts:/app/tailwind.config.ts
-      - ./postcss.config.js:/app/postcss.config.js
-      - ./tsconfig.json:/app/tsconfig.json
-      - ./tsconfig.app.json:/app/tsconfig.app.json
-      - ./tsconfig.node.json:/app/tsconfig.node.json
-      - .:/app # Mount the root directory so package.json is included
-      - /app/node_modules
-    networks:
-      - veriship-network
 
-  mcp-server:
+  mcp:
     build:
       context: .
       dockerfile: Dockerfile.mcp
     container_name: veriship-mcp
-    env_file: ./backend/.env
-    environment:
-      BACKEND_HOST: app
-      # AGENT_TOKEN is already baked in but can be overridden here
     ports:
       - "8001:8001"
+    environment:
+      BACKEND_URL: http://veriship-app:8000
+      MCP_TRANSPORT: sse
+      VERISHIP_MCP_PORT: "8001"
     depends_on:
-      - app
-    networks:
-      - veriship-network
+      - backend
 
 volumes:
   postgres_data:
-
-
-networks:
-  veriship-network:
-    driver: bridge

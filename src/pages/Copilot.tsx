@@ -13,17 +13,17 @@ import remarkGfm from "remark-gfm";
 const N8N_WEBHOOK_URL = "https://heavily-busy-titmouse.ngrok-free.app/webhook/veriship-agent";
 
 function generateSessionId() {
-  return "copilot-" + Math.random().toString(36).substring(2, 12);
+    return "copilot-" + Math.random().toString(36).substring(2, 12);
 }
 
 function getCopilotSessionId() {
-  if (typeof window === "undefined") return "default-session";
-  let id = sessionStorage.getItem("copilot_session_id");
-  if (!id) {
-    id = generateSessionId();
-    sessionStorage.setItem("copilot_session_id", id);
-  }
-  return id;
+    if (typeof window === "undefined") return "default-session";
+    let id = sessionStorage.getItem("copilot_session_id");
+    if (!id) {
+        id = generateSessionId();
+        sessionStorage.setItem("copilot_session_id", id);
+    }
+    return id;
 }
 
 interface Message {
@@ -74,19 +74,32 @@ export default function Copilot() {
                     "Content-Type": "application/json",
                     "ngrok-skip-browser-warning": "true",
                 },
-                body: JSON.stringify({ message: text, sessionId }),
+                body: JSON.stringify({
+                    message: text,
+                    sessionId,
+                    token: localStorage.getItem("authToken") || "",
+                }),
             });
-            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(`Server returned ${res.status}`);
+            }
+
+            const rawText = await res.text();
+            let data: unknown;
+            try {
+                data = JSON.parse(rawText);
+            } catch {
+                data = rawText;
+            }
 
             const replyText =
-                data?.output ||
-                data?.response ||
-                data?.text ||
-                data?.[0]?.output ||
-                data?.[0]?.response ||
-                data?.[0]?.text ||
-                (typeof data === "string" ? data : null) ||
-                `Unknown response format. Raw data: ${JSON.stringify(data).substring(0, 100)}...`;
+                (data as Record<string, string>)?.output ||
+                (data as Record<string, string>)?.response ||
+                (data as Record<string, string>)?.text ||
+                (Array.isArray(data) && (data[0]?.output || data[0]?.response || data[0]?.text)) ||
+                (typeof data === "string" && data) ||
+                `Unknown response format. Raw: ${String(data).substring(0, 100)}...`;
 
             const assistantMessage: Message = {
                 id: (Date.now() + 1).toString(),
@@ -142,22 +155,22 @@ export default function Copilot() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-2">
-                                <Button 
-                                    variant="outline" 
+                                <Button
+                                    variant="outline"
                                     className="w-full justify-start text-left h-auto py-2 whitespace-normal"
                                     onClick={() => setInput("Can you list all active projects for me?")}
                                 >
                                     List all active projects
                                 </Button>
-                                <Button 
-                                    variant="outline" 
+                                <Button
+                                    variant="outline"
                                     className="w-full justify-start text-left h-auto py-2 whitespace-normal"
                                     onClick={() => setInput("What is the readiness score for project 1?")}
                                 >
                                     Check readiness of Project 1
                                 </Button>
-                                <Button 
-                                    variant="outline" 
+                                <Button
+                                    variant="outline"
                                     className="w-full justify-start text-left h-auto py-2 whitespace-normal"
                                     onClick={() => setInput("Show me the high priority defects.")}
                                 >
@@ -175,7 +188,7 @@ export default function Copilot() {
                             </CardHeader>
                             <CardContent>
                                 <p className="text-sm text-muted-foreground leading-relaxed">
-                                    This copilot is connected directly to VeriShip's backend using the MCP protocol. 
+                                    This copilot is connected directly to VeriShip's backend using the MCP protocol.
                                     It can browse, create, edit, and orchestrate across your entire CI/CD and QA pipeline.
                                 </p>
                             </CardContent>
@@ -188,8 +201,8 @@ export default function Copilot() {
                             <CardHeader className="border-b bg-muted/50 rounded-t-xl">
                                 <CardTitle className="flex items-center gap-2">
                                     <span className="relative flex h-3 w-3 mr-1">
-                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
                                     </span>
                                     Chat with Amira
                                 </CardTitle>
