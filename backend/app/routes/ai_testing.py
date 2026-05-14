@@ -3,9 +3,9 @@ AI-powered testing endpoints using OpenRouter API
 """
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 from app.services.ai_testing import (
     generate_test_steps_openrouter,
+    generate_playwright_json_openrouter,
     analyze_test_failure,
     check_api_configuration,
     TestStepRequest,
@@ -47,6 +47,26 @@ async def generate_test_steps(request: TestStepRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate test steps: {str(e)}"
+        )
+
+
+@router.post("/generate-playwright-json")
+async def generate_playwright_json(request: TestStepRequest):
+    """Generate a Playwright-compatible manual test JSON draft from plain language."""
+    try:
+        return await generate_playwright_json_openrouter(
+            request.test_description,
+            request.context,
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Configuration error: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate Playwright JSON: {str(e)}"
         )
 
 @router.post("/analyze-failure")

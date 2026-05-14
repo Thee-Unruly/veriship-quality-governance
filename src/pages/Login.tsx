@@ -162,7 +162,7 @@ export default function Login() {
                             </form>
 
                             <div className="text-xs text-muted-foreground text-center">
-                                Demo: username: testuser | password: testpass
+                                No default demo account is guaranteed. Use Register to create an account if login fails.
                             </div>
                         </TabsContent>
 

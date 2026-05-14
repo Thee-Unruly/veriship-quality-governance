@@ -24,7 +24,7 @@ class TestStepsResponse(BaseModel):
     prompt_used: str
 
 
-async def call_openrouter_async(user_message: str, model: str = None) -> str:
+async def call_openrouter_async(user_message: str, model: Optional[str] = None) -> str:
     """Async helper to call OpenRouter API with error handling and retry logic."""
     if not settings.openrouter_api_key:
         raise ValueError(
@@ -84,11 +84,13 @@ async def call_openrouter_async(user_message: str, model: str = None) -> str:
                 else:
                     raise Exception(f"Failed to call OpenRouter API after {max_retries} attempts: {str(e)}")
 
+    raise Exception("OpenRouter API call exited without a response")
+
 
 async def generate_test_steps_openrouter(
     test_description: str,
     context: str = "Web application testing",
-    model: str = None
+    model: Optional[str] = None
 ) -> TestStepsResponse:
     """
     Generate test steps using OpenRouter API with robust parsing and error handling.
@@ -135,6 +137,71 @@ Important:
         raise ValueError(f"Failed to parse OpenRouter response as JSON: {content[:100]}...\nError: {e}")
 
 
+async def generate_playwright_json_openrouter(
+    test_description: str,
+    context: str = "Web application testing",
+    model: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Generate a Playwright-compatible manual test JSON payload from plain language."""
+    prompt = f"""You are an expert QA automation engineer. Convert the following feature or requirement into a Playwright-compatible manual test JSON object.
+
+Feature or requirement:
+{test_description}
+
+Context:
+{context}
+
+Return ONLY valid JSON with this exact top-level structure:
+{{
+  "title": "Short test title",
+  "description": "Brief explanation of the test objective",
+  "steps": [
+    {{
+      "type": "navigate|click|fill|type|select|check|uncheck|hover|focus|press|screenshot|wait|wait_for_selector|wait_for_navigation|wait_for_load_state|get_text|get_attribute|get_value|assert_text|assert_visible|assert_hidden|assert_url|assert_title|upload_file|drag_and_drop|scroll|http|delay|assert",
+      "description": "Human-readable step description",
+      "selector": "CSS selector or null",
+      "url": "Relative or absolute URL when needed or null",
+      "value": "Input value when needed or null",
+      "text": "Typed text when needed or null",
+      "expected": "Assertion value when needed or null",
+      "expected_status": 200,
+      "expected_contains": "Expected content when needed or null",
+      "method": "HTTP method when needed or null",
+      "headers": null,
+      "body": null,
+      "timeout": null,
+      "duration_ms": null
+    }}
+  ]
+}}
+
+Rules:
+- Generate 5-10 practical steps.
+- Prefer realistic relative URLs when the base URL is provided in context.
+- Use null for fields that are not relevant to a step.
+- Include enough detail that a QA engineer can review and execute the draft.
+- Do not wrap the JSON in markdown or code fences.
+"""
+
+    content = await call_openrouter_async(prompt, model=model)
+
+    try:
+        json_start = content.find('{')
+        json_end = content.rfind('}') + 1
+        if json_start != -1 and json_end > json_start:
+            result = json.loads(content[json_start:json_end])
+        else:
+            result = json.loads(content)
+
+        if not isinstance(result, dict) or not isinstance(result.get("steps"), list):
+            raise ValueError("AI response did not contain a top-level steps array")
+
+        result["prompt_used"] = prompt
+        return result
+    except (json.JSONDecodeError, ValueError) as e:
+        raise ValueError(f"Failed to parse Playwright draft JSON: {content[:120]}...\nError: {e}")
+
+
 def extract_suggestions(text: str) -> List[str]:
     """
     Extract numbered or bulleted suggestions from AI response text
@@ -169,7 +236,7 @@ async def analyze_test_failure(
     test_case_title: str,
     error_message: str,
     steps_executed: int,
-    model: str = None,
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Use OpenRouter AI to analyze test failures and suggest fixes.
@@ -198,39 +265,3 @@ Keep the response concise and practical."""
             "analysis": f"Error during AI analysis: {str(e)}",
             "suggestions": [],
         }
-
-
-def extract_suggestions(text: str) -> list[str]:
-    """
-    Extract numbered or bulleted suggestions from AI response text
-    
-    Args:
-        text: The AI response text to parse
-    
-    Returns:
-        List of up to 3 extracted suggestions
-    """
-    lines = text.split('\n')
-    suggestions = []
-    
-    for line in lines:
-        line = line.strip()
-        if line and (line[0].isdigit() or line.startswith('•') or line.startswith('-') or line.startswith('*')):
-            # Remove numbering/bullets/dashes and leading whitespace
-            suggestion = line.lstrip('0123456789.-•*) ').strip()
-            if suggestion and len(suggestion) > 5:  # Filter out empty/short lines
-                suggestions.append(suggestion)
-    
-    return suggestions[:3]  # Return max 3 suggestions
-
-
-def check_api_configuration() -> dict:
-    """Check if OpenRouter API is properly configured"""
-    return {
-        "configured": bool(OPENROUTER_API_KEY),
-        "api_key_present": bool(OPENROUTER_API_KEY),
-        "base_url": OPENROUTER_BASE_URL,
-        "default_model": DEFAULT_MODEL,
-        "message": "OpenRouter API is configured" if OPENROUTER_API_KEY 
-                   else "OPENROUTER_API_KEY environment variable not set",
-    }

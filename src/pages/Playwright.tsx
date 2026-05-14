@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Monitor, Loader2, Camera, FileDown, RefreshCw, StopCircle, Eye, EyeOff, Film, Image } from "lucide-react";
+import { Play, Monitor, Loader2, Camera, FileDown, RefreshCw, StopCircle, Eye, EyeOff, Film, Image, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ import {
     EmptyState,
     LoadingState,
     StepResult,
-    TestCaseSelector,
     ToggleOption,
 } from "@/components/test-runner";
 
@@ -110,14 +109,6 @@ interface PlaywrightRunnerStatus {
 export default function Playwright() {
     const { toast } = useToast();
 
-    // Cascading dropdowns
-    const [projects, setProjects] = useState<any[]>([]);
-    const [requirements, setRequirements] = useState<any[]>([]);
-    const [testCases, setTestCases] = useState<any[]>([]);
-    const [selectedProjectId, setSelectedProjectId] = useState("");
-    const [selectedRequirementId, setSelectedRequirementId] = useState("");
-    const [selectedTestCaseId, setSelectedTestCaseId] = useState("");
-
     // Playwright State
     const [playwrightConfig, setPlaywrightConfig] = useState<PlaywrightExecutionConfig>({
         browser_type: "chromium",
@@ -136,60 +127,12 @@ export default function Playwright() {
     const [isPlaywrightRunning, setIsPlaywrightRunning] = useState(false);
     const [manualInput, setManualInput] = useState<string>("");
     const [isManualRunning, setIsManualRunning] = useState(false);
+    const [draftPrompt, setDraftPrompt] = useState("");
+    const [isGeneratingDraft, setIsGeneratingDraft] = useState(false);
 
-    // Load projects
     useEffect(() => {
-        const loadProjects = async () => {
-            try {
-                const response = await fetch("/api/projects");
-                const data = await response.json();
-                setProjects(Array.isArray(data) ? data : []);
-            } catch (error) {
-                console.error("Error loading projects:", error);
-            }
-        };
-        loadProjects();
         fetchPlaywrightStatus();
     }, []);
-
-    // Load requirements when project changes
-    useEffect(() => {
-        if (!selectedProjectId) {
-            setRequirements([]);
-            setSelectedRequirementId("");
-            return;
-        }
-        const loadRequirements = async () => {
-            try {
-                const response = await fetch(`/api/requirements/${selectedProjectId}`);
-                const data = await response.json();
-                setRequirements(Array.isArray(data) ? data : []);
-            } catch (error) {
-                console.error("Error loading requirements:", error);
-            }
-        };
-        loadRequirements();
-    }, [selectedProjectId]);
-
-    // Load test cases when requirement changes
-    useEffect(() => {
-        if (!selectedRequirementId) {
-            setTestCases([]);
-            setSelectedTestCaseId("");
-            return;
-        }
-        const loadTestCases = async () => {
-            try {
-                const response = await fetch(`/api/test-cases/${selectedProjectId}`);
-                const data = await response.json();
-                const filtered = data.filter((tc: any) => tc.requirement_id === parseInt(selectedRequirementId));
-                setTestCases(filtered);
-            } catch (error) {
-                console.error("Error loading test cases:", error);
-            }
-        };
-        loadTestCases();
-    }, [selectedRequirementId, selectedProjectId]);
 
     const fetchPlaywrightStatus = async () => {
         try {
@@ -203,51 +146,51 @@ export default function Playwright() {
         }
     };
 
-    const executeWithPlaywright = async () => {
-        if (!selectedTestCaseId) {
+    const generateDraftJson = async () => {
+        if (!draftPrompt.trim()) {
             toast({
-                title: "No test case selected",
-                description: "Please select a test case to execute",
+                title: "No requirement provided",
+                description: "Describe the feature, user flow, or requirement first",
                 variant: "destructive",
             });
             return;
         }
 
-        setIsPlaywrightRunning(true);
-        setPlaywrightResult(null);
+        setIsGeneratingDraft(true);
 
         try {
-            const response = await fetch(
-                `/api/automation/execute/test-case/${selectedTestCaseId}?executed_by=manual`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(playwrightConfig),
-                }
-            );
+            const response = await fetch("/api/ai/generate-playwright-json", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    test_description: draftPrompt,
+                    context: `Application under test base URL: ${playwrightConfig.base_url}. Environment: ${playwrightConfig.environment}. Browser: ${playwrightConfig.browser_type}.`,
+                }),
+            });
 
+            const data = await response.json();
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.detail || "Execution failed");
+                throw new Error(data.detail || "Failed to generate Playwright JSON");
             }
 
-            const data: PlaywrightExecutionResponse = await response.json();
-            setPlaywrightResult(data);
+            setManualInput(JSON.stringify({
+                title: data.title,
+                description: data.description,
+                steps: data.steps,
+            }, null, 2));
 
             toast({
-                title: data.status === "passed" ? "Test Passed ✓" : "Test Failed",
-                description: `Completed in ${(data.duration_ms / 1000).toFixed(1)}s`,
-                variant: data.status === "passed" ? "default" : "destructive",
+                title: "Draft generated",
+                description: `${Array.isArray(data.steps) ? data.steps.length : 0} Playwright steps generated for review`,
             });
         } catch (error: any) {
             toast({
-                title: "Execution Error",
-                description: error.message || "Failed to execute test",
+                title: "Generation Error",
+                description: error.message || "Failed to generate Playwright JSON",
                 variant: "destructive",
             });
         } finally {
-            setIsPlaywrightRunning(false);
-            fetchPlaywrightStatus();
+            setIsGeneratingDraft(false);
         }
     };
 
@@ -290,7 +233,12 @@ export default function Playwright() {
         setPlaywrightResult(null);
 
         try {
-            const body = { config: playwrightConfig, steps };
+            const body = {
+                title: parsed.title || "Generated Playwright Test",
+                description: parsed.description || draftPrompt || "Ad-hoc Playwright execution",
+                config: playwrightConfig,
+                steps,
+            };
             const response = await fetch("/api/automation/execute/manual", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -529,30 +477,41 @@ export default function Playwright() {
                                     />
                                 </div>
 
-                                {/* Test Case Selection */}
+                                {/* AI Draft Generation */}
                                 <div className="pt-4 border-t border-border/50 space-y-4">
-                                    <Label className="text-base font-semibold">Select Test Case</Label>
-                                    <TestCaseSelector
-                                        projects={projects}
-                                        requirements={requirements}
-                                        testCases={testCases}
-                                        selectedProjectId={selectedProjectId}
-                                        selectedRequirementId={selectedRequirementId}
-                                        selectedTestCaseId={selectedTestCaseId}
-                                        onProjectChange={setSelectedProjectId}
-                                        onRequirementChange={setSelectedRequirementId}
-                                        onTestCaseChange={setSelectedTestCaseId}
-                                        compact
+                                    <Label className="text-base font-semibold">AI Draft Generator</Label>
+                                    <Textarea
+                                        value={draftPrompt}
+                                        onChange={(e) => setDraftPrompt(e.target.value)}
+                                        placeholder="Paste a requirement, describe a user flow, or explain the feature you want to automate. Example: User logs in, opens the projects dashboard, filters by status, and verifies only active projects remain visible."
+                                        className="min-h-[140px] rounded-xl border-border/50"
                                     />
+                                    <Button
+                                        onClick={generateDraftJson}
+                                        disabled={isGeneratingDraft}
+                                        className="w-full h-10 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl"
+                                    >
+                                        {isGeneratingDraft ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Generating Draft...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Sparkles className="mr-2 h-4 w-4" />
+                                                Generate Playwright JSON
+                                            </>
+                                        )}
+                                    </Button>
                                 </div>
 
-                                {/* Manual Steps JSON (optional) */}
+                                {/* Generated / Editable Steps JSON */}
                                 <div className="pt-4 border-t border-border/50 space-y-2">
-                                    <Label className="text-base font-semibold">Manual Steps (JSON)</Label>
+                                    <Label className="text-base font-semibold">Generated / Editable Steps JSON</Label>
                                     <Textarea
                                         value={manualInput}
                                         onChange={(e) => setManualInput(e.target.value)}
-                                        placeholder='[ { "type": "navigate", "url": "/login" }, ... ] or { "steps": [...] }'
+                                        placeholder='{ "title": "Login flow", "steps": [ { "type": "navigate", "url": "/login" } ] }'
                                         className="h-40 font-mono text-sm"
                                     />
                                     <div className="flex gap-2">
@@ -579,41 +538,6 @@ export default function Playwright() {
                                     </div>
                                 </div>
 
-                                {/* Execute Button */}
-                                <div className="flex gap-3 pt-4">
-                                    <motion.div className="flex-1" whileTap={{ scale: 0.98 }}>
-                                        <Button
-                                            onClick={executeWithPlaywright}
-                                            disabled={isPlaywrightRunning || !selectedTestCaseId}
-                                            className="w-full h-11 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-xl"
-                                        >
-                                            {isPlaywrightRunning ? (
-                                                <>
-                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                    Running...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Play className="mr-2 h-4 w-4" />
-                                                    Execute Test
-                                                </>
-                                            )}
-                                        </Button>
-                                    </motion.div>
-                                    <AnimatePresence>
-                                        {isPlaywrightRunning && (
-                                            <motion.div
-                                                initial={{ opacity: 0, scale: 0.8 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.8 }}
-                                            >
-                                                <Button variant="destructive" onClick={stopExecution} className="h-11 px-4 rounded-xl">
-                                                    <StopCircle className="h-4 w-4" />
-                                                </Button>
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
                             </ConfigCard>
                         </motion.div>
 
@@ -650,7 +574,7 @@ export default function Playwright() {
                                             <EmptyState
                                                 icon={Monitor}
                                                 title="No results yet"
-                                                description="Select a test case and click Execute to run browser automation"
+                                                description="Generate Playwright JSON from a requirement, review it, then run the draft"
                                             />
                                         </motion.div>
                                     )}

@@ -23,7 +23,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install Playwright browsers (without system deps due to Debian compatibility)
-RUN playwright install chromium firefox webkit
+RUN python -m playwright install chromium
 
 # Install system dependencies for Playwright manually
 RUN apt-get update && apt-get install -y \
