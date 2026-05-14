@@ -68,7 +68,7 @@ export function LoadTestSummaryModal({
         setLoading(true);
         setError(null);
         try {
-            const response = await fetch(`http://localhost:8000/api/load-testing/${jobId}/summary`, {
+            const response = await fetch(`/api/load-testing/${jobId}/summary`, {
                 headers: {
                     "Authorization": `Bearer ${localStorage.getItem("authToken")}`
                 }
@@ -89,7 +89,7 @@ export function LoadTestSummaryModal({
     };
 
     const viewFullReport = () => {
-        window.open(`http://localhost:8000/api/load-testing/${jobId}/report`, "_blank");
+        window.open(`/api/load-testing/${jobId}/report`, "_blank");
     };
 
     if (error) {

@@ -42,7 +42,7 @@ export function EditDefectModal({
     }, [defect, isOpen]);
 
     const { update, loading } = useCrud({
-        baseUrl: "http://localhost:8000/api/defects",
+        baseUrl: "/api/defects",
         onSuccess: () => {
             onOpenChange(false);
             onSuccess();

@@ -37,7 +37,7 @@ export function CreateTestCaseModal({
         if (!projectId) return;
         const fetchReqs = async () => {
             try {
-                const res = await fetch(`http://localhost:8000/api/requirements/${projectId}`);
+                const res = await fetch(`/api/requirements/${projectId}`);
                 if (res.ok) {
                     const data = await res.json();
                     setRequirements(data);
@@ -50,7 +50,7 @@ export function CreateTestCaseModal({
     }, [projectId, isOpen]);
 
     const { create, loading } = useCrud({
-        baseUrl: "http://localhost:8000/api/test-cases",
+        baseUrl: "/api/test-cases",
         onSuccess: () => {
             setTitle("");
             setDescription("");

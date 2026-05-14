@@ -23,7 +23,7 @@ export function CreateReleaseModal({
     const [releaseDate, setReleaseDate] = useState("");
 
     const { create, loading } = useCrud({
-        baseUrl: "http://localhost:8000/api/releases",
+        baseUrl: "/api/releases",
         onSuccess: () => {
             setVersion("");
             setReleaseDate("");

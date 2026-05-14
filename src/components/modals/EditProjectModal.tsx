@@ -31,7 +31,7 @@ export function EditProjectModal({
     }, [project, isOpen]);
 
     const { update, loading } = useCrud({
-        baseUrl: "http://localhost:8000/api/projects",
+        baseUrl: "/api/projects",
         onSuccess: () => {
             onOpenChange(false);
             onSuccess();

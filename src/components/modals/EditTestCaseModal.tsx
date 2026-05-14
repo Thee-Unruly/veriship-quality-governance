@@ -42,7 +42,7 @@ export function EditTestCaseModal({
     }, [testCase, isOpen]);
 
     const { update, loading } = useCrud({
-        baseUrl: "http://localhost:8000/api/test-cases",
+        baseUrl: "/api/test-cases",
         onSuccess: () => {
             onOpenChange(false);
             onSuccess();

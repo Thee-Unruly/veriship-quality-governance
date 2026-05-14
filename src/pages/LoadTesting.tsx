@@ -66,7 +66,7 @@ export default function LoadTesting() {
 
     const fetchProjects = async () => {
         try {
-            const response = await fetch("http://localhost:8000/api/projects/", {
+            const response = await fetch("/api/projects/", {
                 headers: {
                     "Authorization": `Bearer ${localStorage.getItem("authToken")}`
                 }
@@ -80,7 +80,7 @@ export default function LoadTesting() {
 
     const fetchJobs = async () => {
         try {
-            const response = await fetch("http://localhost:8000/api/load-testing/jobs", {
+            const response = await fetch("/api/load-testing/jobs", {
                 headers: {
                     "Authorization": `Bearer ${localStorage.getItem("authToken")}`
                 }
@@ -104,7 +104,7 @@ export default function LoadTesting() {
         try {
             const endpointsList = endpoints.split("\n").filter(e => e.trim());
 
-            const response = await fetch("http://localhost:8000/api/load-testing/start", {
+            const response = await fetch("/api/load-testing/start", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -130,7 +130,7 @@ export default function LoadTesting() {
             // Connect to SSE
             const token = localStorage.getItem("authToken") || "";
             const eventSource = new EventSource(
-                `http://localhost:8000/api/load-testing/${data.job_id}/events?token=${encodeURIComponent(token)}`
+                `/api/load-testing/${data.job_id}/events?token=${encodeURIComponent(token)}`
             );
 
             eventSource.onmessage = (event) => {
@@ -161,7 +161,7 @@ export default function LoadTesting() {
     const downloadPDF = async (jobId: string) => {
         try {
             const response = await fetch(
-                `http://localhost:8000/api/load-testing/${jobId}/report/pdf`,
+                `/api/load-testing/${jobId}/report/pdf`,
                 {
                     headers: {
                         "Authorization": `Bearer ${localStorage.getItem("authToken")}`

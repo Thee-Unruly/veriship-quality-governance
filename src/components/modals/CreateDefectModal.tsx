@@ -31,7 +31,7 @@ export function CreateDefectModal({
     const [foundBy, setFoundBy] = useState("");
 
     const { create, loading } = useCrud({
-        baseUrl: "http://localhost:8000/api/defects",
+        baseUrl: "/api/defects",
         onSuccess: () => {
             setTitle("");
             setDescription("");

@@ -39,7 +39,7 @@ export default function Profile() {
             }
 
             try {
-                const response = await fetch("http://localhost:8000/api/auth/me", {
+                const response = await fetch("/api/auth/me", {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
@@ -76,7 +76,7 @@ export default function Profile() {
 
         setIsSaving(true);
         try {
-            const response = await fetch("http://localhost:8000/api/auth/profile", {
+            const response = await fetch("/api/auth/profile", {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",

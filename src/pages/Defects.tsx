@@ -25,7 +25,7 @@ export default function Defects() {
   const { toast } = useToast();
 
   const { delete: deleteDefect } = useCrud({
-    baseUrl: "http://localhost:8000/api/defects",
+    baseUrl: "/api/defects",
     onSuccess: fetchDefects,
   });
 
@@ -38,7 +38,7 @@ export default function Defects() {
 
     const token = localStorage.getItem("authToken");
 
-    fetch(`http://localhost:8000/api/defects/${selectedProject}`, {
+    fetch(`/api/defects/${selectedProject}`, {
       headers: { "Authorization": `Bearer ${token}` }
     })
       .then((res) => res.json())
@@ -183,7 +183,7 @@ export default function Defects() {
           found_by: pickImportValue(row, ["found by", "found_by", "reporter", "owner"]) || undefined,
         };
 
-        const response = await fetch("http://localhost:8000/api/defects/", {
+        const response = await fetch("/api/defects/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

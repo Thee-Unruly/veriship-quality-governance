@@ -30,7 +30,7 @@ export function CreateRequirementModal({
     const [priority, setPriority] = useState("1");
 
     const { create, loading } = useCrud({
-        baseUrl: "http://localhost:8000/api/requirements",
+        baseUrl: "/api/requirements",
         onSuccess: () => {
             setTitle("");
             setDescription("");

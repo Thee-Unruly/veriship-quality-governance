@@ -42,7 +42,7 @@ export function RunTestSimulationModal({
     useEffect(() => {
         if (!jobId) return;
 
-        const eventSource = new EventSource(`http://localhost:8000/api/test-runs/${jobId}/events`);
+        const eventSource = new EventSource(`/api/test-runs/${jobId}/events`);
 
         eventSource.onmessage = (event) => {
             const data = event.data;
@@ -74,7 +74,7 @@ export function RunTestSimulationModal({
         setJobId(null);
 
         try {
-            const response = await fetch("http://localhost:8000/api/test-runs/run-test-case", {
+            const response = await fetch("/api/test-runs/run-test-case", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

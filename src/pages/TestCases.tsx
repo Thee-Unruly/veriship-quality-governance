@@ -51,7 +51,7 @@ export default function TestCases() {
 
     const token = localStorage.getItem("authToken");
     try {
-      const res = await fetch(`http://localhost:8000/api/test-cases/${selectedProject}?status=${currentTab}`, {
+      const res = await fetch(`/api/test-cases/${selectedProject}?status=${currentTab}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const data = await res.json();
@@ -70,7 +70,7 @@ export default function TestCases() {
     }
     const token = localStorage.getItem("authToken");
     try {
-      const res = await fetch(`http://localhost:8000/api/requirements/${selectedProject}`, {
+      const res = await fetch(`/api/requirements/${selectedProject}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const data = await res.json();
@@ -88,7 +88,7 @@ export default function TestCases() {
   }
 
   const { delete: deleteTestCase } = useCrud({
-    baseUrl: "http://localhost:8000/api/test-cases",
+    baseUrl: "/api/test-cases",
     onSuccess: fetchTestCases,
   });
 
@@ -222,7 +222,7 @@ export default function TestCases() {
           status: normalizeStatus(pickImportValue(row, ["status", "state"]), ["ongoing", "retest", "pass", "fail"], "ongoing"),
         };
 
-        const response = await fetch("http://localhost:8000/api/test-cases/", {
+        const response = await fetch("/api/test-cases/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -252,7 +252,7 @@ export default function TestCases() {
   const handleStatusChange = async (id: number, status: string) => {
     const token = localStorage.getItem("authToken");
     try {
-      await fetch(`http://localhost:8000/api/test-cases/${id}`, {
+      await fetch(`/api/test-cases/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

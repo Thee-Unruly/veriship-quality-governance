@@ -23,7 +23,7 @@ export const ProjectsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setLoading(true);
         try {
             // Use canonical path for projects endpoint
-            const res = await fetch("http://localhost:8000/api/projects/?_=" + Date.now(), {
+            const res = await fetch("/api/projects/?_=" + Date.now(), {
                 // ensure we don't receive a cached response
                 cache: "no-store",
                 headers: {

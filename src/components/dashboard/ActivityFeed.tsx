@@ -83,7 +83,7 @@ export function ActivityFeed({ activities = [] }: ActivityFeedProps) {
     const fetchActivity = async () => {
       try {
         const token = localStorage.getItem("authToken");
-        const res = await fetch("http://localhost:8000/api/metrics/activity?limit=6", {
+        const res = await fetch("/api/metrics/activity?limit=6", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (!res.ok) return;

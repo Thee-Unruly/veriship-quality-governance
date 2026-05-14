@@ -30,7 +30,7 @@ export function AIInsightsPanel() {
       setLoading(true);
       try {
         const token = localStorage.getItem("authToken");
-        const res = await fetch("http://localhost:8000/api/copilot/insights", {
+        const res = await fetch("/api/copilot/insights", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (!res.ok) throw new Error("Failed to load insights");
@@ -136,7 +136,7 @@ export function AIInsightsPanel() {
                           onClick={async () => {
                             try {
                               const token = localStorage.getItem("authToken");
-                              const res = await fetch("http://localhost:8000/api/copilot/apply-insight", {
+                              const res = await fetch("/api/copilot/apply-insight", {
                                 method: "POST",
                                 headers: { 
                                   "Content-Type": "application/json",

@@ -27,7 +27,7 @@ export default function Projects() {
   const fetchedProjectsRef = useRef<Set<number>>(new Set());
 
   const { delete: deleteProject } = useCrud({
-    baseUrl: "http://localhost:8000/api/projects",
+    baseUrl: "/api/projects",
     onSuccess: async () => {
       try { await refresh(); } catch (e) { /* ignore */ }
     },
@@ -47,7 +47,7 @@ export default function Projects() {
   const fetchTeamMembers = async (projectId: number) => {
     const token = localStorage.getItem("authToken");
     try {
-      const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team`, {
+      const res = await fetch(`/api/projects/${projectId}/team`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (!res.ok) {
@@ -69,7 +69,7 @@ export default function Projects() {
 
     const token = localStorage.getItem("authToken");
     try {
-      const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team`, {
+      const res = await fetch(`/api/projects/${projectId}/team`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -103,7 +103,7 @@ export default function Projects() {
 
     const token = localStorage.getItem("authToken");
     try {
-      const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team/${memberId}`, {
+      const res = await fetch(`/api/projects/${projectId}/team/${memberId}`, {
         method: "DELETE",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -124,7 +124,7 @@ export default function Projects() {
 
     const token = localStorage.getItem("authToken");
     try {
-      const res = await fetch(`http://localhost:8000/api/projects/${projectId}/team/${memberId}`, {
+      const res = await fetch(`/api/projects/${projectId}/team/${memberId}`, {
         method: "PUT",
         headers: { 
           "Content-Type": "application/json",

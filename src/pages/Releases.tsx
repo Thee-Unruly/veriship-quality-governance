@@ -22,7 +22,7 @@ export default function Releases() {
   const [selectedRelease, setSelectedRelease] = useState<any>(null);
 
   const { delete: deleteRelease } = useCrud({
-    baseUrl: "http://localhost:8000/api/releases",
+    baseUrl: "/api/releases",
     onSuccess: fetchReleases,
   });
 
@@ -35,7 +35,7 @@ export default function Releases() {
 
     const token = localStorage.getItem("authToken");
 
-    fetch(`http://localhost:8000/api/releases/${selectedProject}`, {
+    fetch(`/api/releases/${selectedProject}`, {
       headers: { "Authorization": `Bearer ${token}` }
     })
       .then((res) => res.json())

@@ -153,7 +153,7 @@ export default function TestRunner() {
     useEffect(() => {
         const loadProjects = async () => {
             try {
-                const response = await fetch("http://localhost:8000/api/projects");
+                const response = await fetch("/api/projects");
                 const data = await response.json();
                 setProjects(Array.isArray(data) ? data : []);
             } catch (error) {
@@ -172,7 +172,7 @@ export default function TestRunner() {
         }
         const loadRequirements = async () => {
             try {
-                const response = await fetch(`http://localhost:8000/api/requirements/${selectedProjectId}`);
+                const response = await fetch(`/api/requirements/${selectedProjectId}`);
                 const data = await response.json();
                 setRequirements(Array.isArray(data) ? data : []);
             } catch (error) {
@@ -191,7 +191,7 @@ export default function TestRunner() {
         }
         const loadTestCases = async () => {
             try {
-                const response = await fetch(`http://localhost:8000/api/test-cases/${selectedProjectId}`);
+                const response = await fetch(`/api/test-cases/${selectedProjectId}`);
                 const data = await response.json();
                 const filtered = data.filter((tc: any) => tc.requirement_id === parseInt(selectedRequirementId));
                 setTestCases(filtered);
@@ -224,7 +224,7 @@ export default function TestRunner() {
 
             toast({ title: "Generating scenarios...", description: "AI is creating 5 test scenarios" });
 
-            const response = await fetch("http://localhost:8000/api/copilot/generate-scenarios", {
+            const response = await fetch("/api/copilot/generate-scenarios", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ testCase: selectedCase, requirement: selectedReq, count: 5 }),
@@ -240,7 +240,7 @@ export default function TestRunner() {
 
             for (let i = 0; i < generatedScenarios.length; i++) {
                 setCurrentScenario(i + 1);
-                const runResponse = await fetch("http://localhost:8000/api/trial/run", {
+                const runResponse = await fetch("/api/trial/run", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -280,7 +280,7 @@ export default function TestRunner() {
         setIsConvertingToJson(true);
         try {
             const selectedCase = testCases.find(tc => tc.id === parseInt(selectedTestCaseId));
-            const response = await fetch("http://localhost:8000/api/copilot/convert-test-to-json", {
+            const response = await fetch("/api/copilot/convert-test-to-json", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ testCase: selectedCase }),
@@ -325,7 +325,7 @@ export default function TestRunner() {
             setResults(null);
 
             const parsed = JSON.parse(testInput);
-            const response = await fetch("http://localhost:8000/api/trial/run", {
+            const response = await fetch("/api/trial/run", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

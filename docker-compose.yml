@@ -34,8 +34,6 @@ services:
     container_name: veriship-app
     ports:
       - "8000:8000"
-    env_file:
-      - ./backend/.env
     environment:
       DATABASE_URL: postgresql://veriship_user:veriship_dev_password@postgres:5432/veriship_db
       REDIS_URL: redis://redis:6379/0
@@ -55,11 +53,14 @@ services:
     container_name: veriship-frontend
     ports:
       - "5173:5173"
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
     depends_on:
       - backend
     volumes:
       - ./src:/app/src
       - ./public:/app/public
+      - ./vite.config.ts:/app/vite.config.ts
 
   mcp:
     build:

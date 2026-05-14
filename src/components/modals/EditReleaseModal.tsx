@@ -39,7 +39,7 @@ export function EditReleaseModal({
     }, [release, isOpen]);
 
     const { update, loading } = useCrud({
-        baseUrl: "http://localhost:8000/api/releases",
+        baseUrl: "/api/releases",
         onSuccess: () => {
             onOpenChange(false);
             onSuccess();

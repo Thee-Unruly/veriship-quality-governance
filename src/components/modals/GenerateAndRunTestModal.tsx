@@ -52,7 +52,7 @@ export function GenerateAndRunTestModal({
     useEffect(() => {
         if (!jobId) return;
 
-        const eventSource = new EventSource(`http://localhost:8000/api/test-runs/${jobId}/events`);
+        const eventSource = new EventSource(`/api/test-runs/${jobId}/events`);
 
         eventSource.onmessage = (event) => {
             const data = event.data;
@@ -91,7 +91,7 @@ export function GenerateAndRunTestModal({
         setJobId(null);
 
         try {
-            const response = await fetch("http://localhost:8000/api/test-runs/generate-and-run", {
+            const response = await fetch("/api/test-runs/generate-and-run", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

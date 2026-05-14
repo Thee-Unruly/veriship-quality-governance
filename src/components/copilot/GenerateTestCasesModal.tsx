@@ -89,7 +89,7 @@ export function GenerateTestCasesModal({
                 requirement_id: requirementId,
                 test_cases: selectedCases
             };
-            const resp = await fetch("http://localhost:8000/api/test-cases/batch-add", {
+            const resp = await fetch("/api/test-cases/batch-add", {
                 method: "POST",
                 headers: { 
                     "Content-Type": "application/json",
@@ -110,7 +110,7 @@ export function GenerateTestCasesModal({
     const handleGenerate = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:8000/api/copilot/generate-test-cases/${requirementId}`, {
+            const response = await fetch(`/api/copilot/generate-test-cases/${requirementId}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

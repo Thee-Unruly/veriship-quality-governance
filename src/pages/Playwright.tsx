@@ -141,7 +141,7 @@ export default function Playwright() {
     useEffect(() => {
         const loadProjects = async () => {
             try {
-                const response = await fetch("http://localhost:8000/api/projects");
+                const response = await fetch("/api/projects");
                 const data = await response.json();
                 setProjects(Array.isArray(data) ? data : []);
             } catch (error) {
@@ -161,7 +161,7 @@ export default function Playwright() {
         }
         const loadRequirements = async () => {
             try {
-                const response = await fetch(`http://localhost:8000/api/requirements/${selectedProjectId}`);
+                const response = await fetch(`/api/requirements/${selectedProjectId}`);
                 const data = await response.json();
                 setRequirements(Array.isArray(data) ? data : []);
             } catch (error) {
@@ -180,7 +180,7 @@ export default function Playwright() {
         }
         const loadTestCases = async () => {
             try {
-                const response = await fetch(`http://localhost:8000/api/test-cases/${selectedProjectId}`);
+                const response = await fetch(`/api/test-cases/${selectedProjectId}`);
                 const data = await response.json();
                 const filtered = data.filter((tc: any) => tc.requirement_id === parseInt(selectedRequirementId));
                 setTestCases(filtered);
@@ -193,7 +193,7 @@ export default function Playwright() {
 
     const fetchPlaywrightStatus = async () => {
         try {
-            const response = await fetch("http://localhost:8000/api/automation/status");
+            const response = await fetch("/api/automation/status");
             if (response.ok) {
                 const data = await response.json();
                 setPlaywrightStatus(data);
@@ -218,7 +218,7 @@ export default function Playwright() {
 
         try {
             const response = await fetch(
-                `http://localhost:8000/api/automation/execute/test-case/${selectedTestCaseId}?executed_by=manual`,
+                `/api/automation/execute/test-case/${selectedTestCaseId}?executed_by=manual`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -291,7 +291,7 @@ export default function Playwright() {
 
         try {
             const body = { config: playwrightConfig, steps };
-            const response = await fetch("http://localhost:8000/api/automation/execute/manual", {
+            const response = await fetch("/api/automation/execute/manual", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(body),
@@ -321,7 +321,7 @@ export default function Playwright() {
     const stopExecution = async () => {
         if (!playwrightResult?.execution_id) return;
         try {
-            await fetch(`http://localhost:8000/api/automation/executions/${playwrightResult.execution_id}`, {
+            await fetch(`/api/automation/executions/${playwrightResult.execution_id}`, {
                 method: "DELETE",
             });
             toast({ title: "Execution stopped", description: "Test was cancelled" });
@@ -333,7 +333,7 @@ export default function Playwright() {
     const downloadTrace = () => {
         if (!playwrightResult?.execution_id) return;
         window.open(
-            `http://localhost:8000/api/automation/executions/${playwrightResult.execution_id}/trace?download=true`,
+            `/api/automation/executions/${playwrightResult.execution_id}/trace?download=true`,
             "_blank"
         );
     };
@@ -341,7 +341,7 @@ export default function Playwright() {
     const downloadScreenshot = () => {
         if (!playwrightResult?.execution_id) return;
         window.open(
-            `http://localhost:8000/api/automation/executions/${playwrightResult.execution_id}/screenshot?download=true`,
+            `/api/automation/executions/${playwrightResult.execution_id}/screenshot?download=true`,
             "_blank"
         );
     };

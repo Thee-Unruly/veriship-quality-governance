@@ -40,7 +40,7 @@ export function EditRequirementModal({
     }, [requirement, isOpen]);
 
     const { update, loading } = useCrud({
-        baseUrl: "http://localhost:8000/api/requirements",
+        baseUrl: "/api/requirements",
         onSuccess: () => {
             onOpenChange(false);
             onSuccess();

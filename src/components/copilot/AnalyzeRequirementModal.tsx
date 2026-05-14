@@ -47,7 +47,7 @@ export function AnalyzeRequirementModal({
         setLoading(true);
         try {
             const response = await fetch(
-                `http://localhost:8000/api/copilot/analyze-requirement-clarity/${requirementId}`,
+                `/api/copilot/analyze-requirement-clarity/${requirementId}`,
                 {
                     method: "POST",
                     headers: {

@@ -54,7 +54,7 @@ export default function Requirements() {
 
     const token = localStorage.getItem("authToken");
     try {
-      const response = await fetch(`http://localhost:8000/api/requirements/${selectedProject}`, {
+      const response = await fetch(`/api/requirements/${selectedProject}`, {
         headers: { "Authorization": `Bearer ${token}` }
       });
       const data = await response.json();
@@ -68,7 +68,7 @@ export default function Requirements() {
   };
 
   const { delete: deleteRequirement } = useCrud({
-    baseUrl: "http://localhost:8000/api/requirements",
+    baseUrl: "/api/requirements",
     onSuccess: () => {
       fetchRequirements();
       toast({ title: "Requirement deleted successfully." });
@@ -217,7 +217,7 @@ export default function Requirements() {
           priority,
         };
 
-        const response = await fetch("http://localhost:8000/api/requirements/", {
+        const response = await fetch("/api/requirements/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

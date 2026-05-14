@@ -25,7 +25,7 @@ export default function AIInsightsPage() {
         const fetchInsights = async () => {
             setLoading(true);
             try {
-                const res = await fetch("http://localhost:8000/api/copilot/insights");
+                const res = await fetch("/api/copilot/insights");
                 if (!res.ok) throw new Error("Failed to load insights");
                 const data = await res.json();
                 if (mounted) setInsights(data || []);
@@ -94,7 +94,7 @@ export default function AIInsightsPage() {
                                                         className="h-7 text-xs"
                                                         onClick={async () => {
                                                             try {
-                                                                const res = await fetch("http://localhost:8000/api/copilot/apply-insight", {
+                                                                const res = await fetch("/api/copilot/apply-insight", {
                                                                     method: "POST",
                                                                     headers: { "Content-Type": "application/json" },
                                                                     body: JSON.stringify(insight),

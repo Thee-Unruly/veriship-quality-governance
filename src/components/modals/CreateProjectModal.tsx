@@ -40,7 +40,7 @@ export function CreateProjectModal({
     const { refresh } = useProjects();
 
     const { create, loading } = useCrud({
-        baseUrl: "http://localhost:8000/api/projects",
+        baseUrl: "/api/projects",
         onSuccess: async () => {
             // Success handling moved to handleSubmit after team members are added
         },
@@ -81,7 +81,7 @@ export function CreateProjectModal({
 
             for (const member of validMembers) {
                 try {
-                    const response = await fetch(`http://localhost:8000/api/projects/${result.id}/team`, {
+                    const response = await fetch(`/api/projects/${result.id}/team`, {
                         method: "POST",
                         headers: { 
                             "Content-Type": "application/json",

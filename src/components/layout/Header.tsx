@@ -98,7 +98,7 @@ export function Header() {
       setLoadingNotifications(true);
       const token = localStorage.getItem("authToken");
       try {
-        const res = await fetch("http://localhost:8000/api/notifications", {
+        const res = await fetch("/api/notifications/", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (res.status === 401) {

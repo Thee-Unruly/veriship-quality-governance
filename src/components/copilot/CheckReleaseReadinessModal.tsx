@@ -46,7 +46,7 @@ export function CheckReleaseReadinessModal({
 
         try {
 
-            const response = await fetch(`http://localhost:8000/api/copilot/check-release-readiness/${releaseId}`, {
+            const response = await fetch(`/api/copilot/check-release-readiness/${releaseId}`, {
 
                 method: "POST",
 

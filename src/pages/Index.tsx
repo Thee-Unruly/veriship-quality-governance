@@ -90,7 +90,7 @@ export default function Index() {
 
     try {
       // Fetch projects
-      const projectsRes = await fetch("http://localhost:8000/api/projects/", {
+      const projectsRes = await fetch("/api/projects/", {
         headers: { "Authorization": `Bearer ${token}` }
       });
       let projectsData: ProjectData[] = [];
@@ -102,7 +102,7 @@ export default function Index() {
       setProjects(Array.isArray(projectsData) ? projectsData : []);
 
       // Fetch metrics
-      const metricsRes = await fetch("http://localhost:8000/api/metrics/dashboard", {
+      const metricsRes = await fetch("/api/metrics/dashboard", {
         headers: { "Authorization": `Bearer ${token}` }
       });
       if (metricsRes.status === 401) {
@@ -120,7 +120,7 @@ export default function Index() {
 
       // Fetch activity
       try {
-        const activityRes = await fetch("http://localhost:8000/api/metrics/activity", {
+        const activityRes = await fetch("/api/metrics/activity", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         if (activityRes.status === 401) {
@@ -153,7 +153,7 @@ export default function Index() {
 
       // Fetch releases
       try {
-        const releasesRes = await fetch("http://localhost:8000/api/releases/", {
+        const releasesRes = await fetch("/api/releases/", {
           headers: { "Authorization": `Bearer ${token}` }
         });
         let releasesData: any[] = [];
@@ -170,7 +170,7 @@ export default function Index() {
         // Fetch approvals for each release
         for (const release of pendingReleases) {
           try {
-            const approvalsRes = await fetch(`http://localhost:8000/api/releases/${release.id}/approvals`, {
+            const approvalsRes = await fetch(`/api/releases/${release.id}/approvals`, {
               headers: { "Authorization": `Bearer ${token}` }
             });
             let approvalsData: any[] = [];
